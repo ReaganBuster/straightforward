@@ -9,9 +9,20 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Login from './pages/auth/Login';
 import Signup  from './pages/auth/Signup';
+import { useAuthListener } from './hooks/useAuthListener';
+import TransactionsPage from './pages/Transactions';
+import DirectMessages from './components/dm/directMessaging';
+import Messages from './pages/messages';
 
 const App = () => {
-  const user = useRecoilValue(userAtom);
+  useAuthListener();
+  const { user, loading } = useRecoilValue(userAtom);
+
+  if (loading) {
+    
+    return <div>Loading...</div>;
+  }
+
 
   return (
     <Router>
@@ -19,10 +30,12 @@ const App = () => {
       <Routes>
         <Route path="/" element={user ? <Navigate to="/feed" /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/feed" /> : <Signup />} />
-        <Route path="/feed" element={user ? <Feed /> : <Navigate to="/" />} />
+        <Route path="/feed" element={user ? <Feed user={user}/> : <Navigate to="/" />} />
         <Route path="/chat" element={user ? <Chat /> : <Navigate to="/" />} />
-        <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
-        <Route path="/settings" element={user ? <Settings /> : <Navigate to="/" />} />
+        <Route path="/m/:id" element={user ? <Messages user={user}/> : <Navigate to="/" />} />
+        <Route path="/transactions" element={user ? <TransactionsPage /> : <Navigate to="/" />} />
+        <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/" />} />
+        <Route path="/settings" element={user ? <Settings user={user}/> : <Navigate to="/" />} />
         <Route path="*" element={<div className="p-6">404: Not Found</div>} />
       </Routes>
     </Router>

@@ -1,9 +1,9 @@
-import SocialFeed from "../components/feed/index";
+import FeedComponent from "../components/feed/feed";
 
-function Feed() {
+function Feed({user}) {
     return (
         <div>
-            <SocialFeed />
+            <FeedComponent user={user} />
         </div>
     );
 }
