@@ -13,6 +13,9 @@ import { useAuthListener } from './hooks/useAuthListener';
 import TransactionsPage from './pages/Transactions';
 import DirectMessages from './components/dm/directMessaging';
 import Messages from './pages/messages';
+import Analytics from './pages/Analytics';
+import Notifications from './pages/notifications';
+import HelpScreen from './pages/help';
 
 const App = () => {
   useAuthListener();
@@ -32,10 +35,13 @@ const App = () => {
         <Route path="/signup" element={user ? <Navigate to="/feed" /> : <Signup />} />
         <Route path="/feed" element={user ? <Feed user={user}/> : <Navigate to="/" />} />
         <Route path="/chat" element={user ? <Chat /> : <Navigate to="/" />} />
+        <Route path="/notifications" element={user ? <Notifications user={user} /> : <Navigate to="/" />} />
         <Route path="/m/:id" element={user ? <Messages user={user}/> : <Navigate to="/" />} />
+        <Route path="/analytics" element={user ? <Analytics user={user} /> : <Navigate to="/" />} />
         <Route path="/transactions" element={user ? <TransactionsPage /> : <Navigate to="/" />} />
         <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/" />} />
         <Route path="/settings" element={user ? <Settings user={user}/> : <Navigate to="/" />} />
+        <Route path="/help" element={user ? <HelpScreen /> : <Navigate to="/" />} />
         <Route path="*" element={<div className="p-6">404: Not Found</div>} />
       </Routes>
     </Router>

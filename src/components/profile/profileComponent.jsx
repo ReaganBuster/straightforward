@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Heart, ArrowUpRight, Bookmark, Share2, Grid, Film, 
   MessageSquare, Settings, ChevronLeft, Users, Star,
@@ -11,7 +11,7 @@ import {
 import { useAuth, useProfile, useUserPosts, useWallet, useTopExperts } from '../../hooks/hooks';
 
 const Profile = ({user}) => {
-  const { username } = useParams();
+//   const { username } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('media');

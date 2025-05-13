@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Image, Lock, Unlock, X, BarChart2, Send, CircleAlert, MessageSquare, DollarSign, Users } from 'lucide-react';
+import { Image, Lock, Unlock, X, BarChart2, Send, CircleAlert, MessageSquare, DollarSign, Users, FileText, Calendar, Gift, TrendingUp } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
 const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
@@ -12,10 +12,15 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
   const [postFee, setPostFee] = useState(5000);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [monetizationModel, setMonetizationModel] = useState('post-unlock');
+  const [monetizationModel, setMonetizationModel] = useState('');
   const [showMonetizationOptions, setShowMonetizationOptions] = useState(false);
   const [dmFee, setDmFee] = useState(2000);
   const [enablePaidDMs, setEnablePaidDMs] = useState(false);
+  const [previewContent, setPreviewContent] = useState('');
+  const [monetizationTypeId, setMonetizationTypeId] = useState(null);
+  const [monetizationTypesList, setMonetizationTypesList] = useState([]);
+  const [selectedMonetizationType, setSelectedMonetizationType] = useState(null);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   
   const fileInputRef = useRef(null);
   
@@ -25,31 +30,112 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
     'Marketing', 'Investing', 'Crypto', 'Career', 'Mobile Money'
   ];
 
-  // Monetization models
+  // Monetization models with mapping to new monetization_types
   const monetizationModels = [
-    { id: 'post-unlock', name: 'Pay-to-Unlock Post', icon: <Lock size={14} /> },
-    { id: 'paid-dm', name: 'Paid Direct Messaging', icon: <MessageSquare size={14} /> },
-    { id: 'subscription', name: 'Subscription Access', icon: <Users size={14} /> }
+    { 
+      id: 'content_unlock', 
+      name: 'Pay-to-Unlock Post', 
+      icon: <Lock size={14} />,
+      category: 'content'
+    },
+    { 
+      id: 'paid_dm', 
+      name: 'Paid Direct Messaging', 
+      icon: <MessageSquare size={14} />,
+      category: 'messaging'
+    },
+    { 
+      id: 'user_subscription', 
+      name: 'Subscription Access', 
+      icon: <Users size={14} />,
+      category: 'subscription'
+    },
+    { 
+      id: 'file_download', 
+      name: 'File Download', 
+      icon: <FileText size={14} />,
+      category: 'content'
+    },
+    { 
+      id: 'tip', 
+      name: 'Tipping Enabled', 
+      icon: <Gift size={14} />,
+      category: 'community'
+    },
+    { 
+      id: 'post_boost', 
+      name: 'Boost This Post', 
+      icon: <TrendingUp size={14} />,
+      category: 'community'
+    }
   ];
 
+  // Fetch monetization types from the database on component mount
   useEffect(() => {
-    // Set appropriate options based on selected monetization model
-    if (monetizationModel === 'post-unlock') {
-      setIsPremium(true);
-      setEnablePaidDMs(false);
-    } else if (monetizationModel === 'paid-dm') {
-      setIsPremium(false);
-      setEnablePaidDMs(true);
-    } else if (monetizationModel === 'subscription') {
-      // For subscription, we'll assume the entire profile is already monetized
-      // This would be handled at profile level, not per post
-      setIsPremium(false);
-      setEnablePaidDMs(false);
-    } else {
-      setIsPremium(false);
-      setEnablePaidDMs(false);
+    async function fetchMonetizationTypes() {
+      try {
+        const { data, error } = await supabase
+          .from('monetization_types')
+          .select('*')
+          .eq('is_active', true);
+          
+        if (error) throw error;
+        
+        setMonetizationTypesList(data);
+      } catch (err) {
+        console.error('Error fetching monetization types:', err);
+      }
     }
-  }, [monetizationModel]);
+    
+    fetchMonetizationTypes();
+  }, []);
+
+  // Handle monetization model selection effects
+  useEffect(() => {
+    if (!monetizationModel) {
+      setIsPremium(false);
+      setEnablePaidDMs(false);
+      setMonetizationTypeId(null);
+      setSelectedMonetizationType(null);
+      return;
+    }
+    
+    // Find the corresponding monetization type in our fetched list
+    const selectedType = monetizationTypesList.find(type => type.type_code === monetizationModel);
+    setSelectedMonetizationType(selectedType);
+    
+    if (selectedType) {
+      setMonetizationTypeId(selectedType.type_id);
+    }
+    
+    // Set appropriate options based on selected monetization model
+    switch(monetizationModel) {
+      case 'content_unlock':
+        setIsPremium(true);
+        setEnablePaidDMs(false);
+        break;
+      case 'paid_dm':
+        setIsPremium(false);
+        setEnablePaidDMs(true);
+        break;
+      case 'user_subscription':
+        setIsPremium(false);
+        setEnablePaidDMs(false);
+        break;
+      case 'file_download':
+        setIsPremium(true);
+        setEnablePaidDMs(false);
+        break;
+      case 'tip':
+      case 'post_boost':
+        setIsPremium(false);
+        setEnablePaidDMs(false);
+        break;
+      default:
+        setIsPremium(false);
+        setEnablePaidDMs(false);
+    }
+  }, [monetizationModel, monetizationTypesList]);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -109,28 +195,61 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
       }
       
       // Create post with monetization details
-      const { data: postData, error: postError } = await supabase
+      const postData = {
+        user_id: user.user_id,
+        content: content,
+        image_url: imageUrl,
+        is_premium: isPremium,
+        trending_category: selectedTopics[0] || 'General',
+        // These are the main changes to support our new schema
+        monetization_model: monetizationModel, // Keep for backward compatibility
+        monetization_type_id: monetizationTypeId,
+        content_fee: isPremium ? postFee : null,
+        dm_fee: enablePaidDMs ? dmFee : null,
+        preview_content: previewContent || null,
+        has_attachments: !!selectedImage,
+        requires_subscription: monetizationModel === 'user_subscription'
+      };
+      
+      // Insert the post
+      const { data: newPostData, error: postError } = await supabase
         .from('posts')
-        .insert({
-          user_id: user.user_id,
-          content: content,
-          image_url: imageUrl,
-          is_premium: isPremium,
-          trending_category: selectedTopics[0] || 'General',
-          monetization_model: monetizationModel,
-          content_fee: isPremium ? postFee : null,
-          dm_fee: enablePaidDMs ? dmFee : null,
-          requires_subscription: monetizationModel === 'subscription'
-        })
+        .insert(postData)
         .select('post_id')
         .single();
       
       if (postError) throw postError;
       
+      // If there's a monetization type selected, add to monetization_settings
+      if (monetizationTypeId) {
+        // First check if this setting already exists
+        const { data: existingSettings } = await supabase
+          .from('monetization_settings')
+          .select('setting_id')
+          .eq('user_id', user.user_id)
+          .eq('monetization_type_id', monetizationTypeId)
+          .single();
+          
+        if (!existingSettings) {
+          // Create new monetization setting for this user if it doesn't exist
+          const monetizationSetting = {
+            user_id: user.user_id,
+            monetization_type_id: monetizationTypeId,
+            is_enabled: true,
+            price_amount: isPremium ? postFee : (enablePaidDMs ? dmFee : 0),
+            description: `Setting for ${monetizationModel}`,
+          };
+          
+          await supabase
+            .from('monetization_settings')
+            .insert(monetizationSetting);
+        }
+      }
+      
       // Insert topics if any
       if (selectedTopics.length > 0) {
         const topicInserts = selectedTopics.map(topic => ({
-          post_id: postData.post_id,
+          post_id: newPostData.post_id,
           topic: topic
         }));
         
@@ -149,7 +268,9 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
       setSelectedTopics([]);
       setMonetizationModel('');
       setEnablePaidDMs(false);
-      onPostCreated && onPostCreated(postData);
+      setPreviewContent('');
+      setMonetizationTypeId(null);
+      onPostCreated && onPostCreated(newPostData);
       !inFeed && onClose && onClose();
       
     } catch (err) {
@@ -273,6 +394,33 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
                 Free (No Monetization)
               </button>
             </div>
+            
+            {/* Show advanced settings toggle only when a monetization type is selected */}
+            {monetizationModel && (
+              <div className="mt-2">
+                <button 
+                  onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                  className="text-xs text-red-600 flex items-center"
+                >
+                  {showAdvancedSettings ? 'Hide' : 'Show'} advanced settings
+                  <span className="ml-1">{showAdvancedSettings ? '▲' : '▼'}</span>
+                </button>
+              </div>
+            )}
+            
+            {/* Advanced Settings Section */}
+            {showAdvancedSettings && monetizationModel === 'content_unlock' && (
+              <div className="mt-2 border-t border-gray-200 pt-2">
+                <div className="text-xs text-gray-700 mb-1">Preview content (shown before unlock)</div>
+                <textarea
+                  placeholder="Add a teaser that will be visible before content unlock..."
+                  value={previewContent}
+                  onChange={(e) => setPreviewContent(e.target.value)}
+                  className="w-full p-2 border border-gray-200 rounded-lg text-gray-700 text-xs resize-none h-16"
+                  maxLength={200}
+                />
+              </div>
+            )}
           </div>
         )}
         
@@ -280,7 +428,11 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
           <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-100">
             <div className="flex items-center text-red-800 mb-1">
               <Lock size={14} className="mr-1" />
-              <span className="text-sm font-medium">Premium Post - Pay to Unlock</span>
+              <span className="text-sm font-medium">
+                {monetizationModel === 'content_unlock' ? 'Premium Post - Pay to Unlock' : 
+                 monetizationModel === 'file_download' ? 'File Download - Pay to Access' : 
+                 'Premium Content'}
+              </span>
             </div>
             
             <input

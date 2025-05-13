@@ -884,3 +884,158 @@ export const useTopics = () => {
 
   return { topics, loading, error };
 };
+
+// Custom hook for managing post ratings
+export const usePostRatings = () => {
+  const [userRatings, setUserRatings] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch user's existing ratings
+  const fetchUserRatings = async (userId) => {
+    if (!userId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabaseQueries.supabase
+        .from('ratings')
+        .select('rated_id, score')
+        .eq('rater_id', userId);
+        
+      if (error) throw error;
+      
+      // Convert to a map of post_id -> rating score for easy lookup
+      const ratingsMap = {};
+      data.forEach(rating => {
+        ratingsMap[rating.rated_id] = rating.score;
+      });
+      
+      setUserRatings(ratingsMap);
+    } catch (err) {
+      console.error('Error fetching user ratings:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Rate a post (create or update rating)
+  const ratePost = async (userId, postId, authorId, score, comment = null) => {
+    if (!userId || !postId || !authorId || !score) {
+      setError('Missing required parameters for rating');
+      return null;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Check if user has already rated this post
+      const { data: existingRatings, error: fetchError } = await supabaseClient
+        .from('ratings')
+        .select('rating_id, score')
+        .eq('rater_id', userId)
+        .eq('rated_id', postId);
+        
+      if (fetchError) throw fetchError;
+      
+      let result;
+      
+      if (existingRatings && existingRatings.length > 0) {
+        // Update existing rating
+        const { data, error } = await supabaseClient
+          .from('ratings')
+          .update({ 
+            score,
+            comment: comment,
+            created_at: new Date().toISOString()
+          })
+          .eq('rating_id', existingRatings[0].rating_id)
+          .select();
+          
+        if (error) throw error;
+        result = data;
+      } else {
+        // Create new rating
+        const { data, error } = await supabaseClient
+          .from('ratings')
+          .insert({
+            rater_id: userId,
+            rated_id: postId,
+            score,
+            comment
+          })
+          .select();
+          
+        if (error) throw error;
+        result = data;
+      }
+      
+      // Update local state
+      setUserRatings(prev => ({
+        ...prev,
+        [postId]: score
+      }));
+      
+      // Update the post's average rating
+      await updatePostRating(postId);
+      
+      // Update the author's average rating
+      await updateAuthorRating(authorId);
+      
+      return result;
+    } catch (err) {
+      console.error('Error rating post:', err);
+      setError(err.message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Calculate and update the average rating for a post
+  const updatePostRating = async (postId) => {
+    try {
+      // Calculate average rating from ratings table
+      const { data, error } = await supabaseClient
+        .rpc('calculate_post_average_rating', { post_id_param: postId });
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (err) {
+      console.error('Error updating post average rating:', err);
+      setError(err.message);
+      return null;
+    }
+  };
+  
+  // Calculate and update the average rating for an author
+  const updateAuthorRating = async (authorId) => {
+    try {
+      // Calculate average user rating from ratings table
+      const { data, error } = await supabaseClient
+        .rpc('calculate_user_average_rating', { user_id_param: authorId });
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (err) {
+      console.error('Error updating author average rating:', err);
+      setError(err.message);
+      return null;
+    }
+  };
+
+  return {
+    userRatings,
+    isLoading,
+    error,
+    fetchUserRatings,
+    ratePost,
+    updatePostRating,
+    updateAuthorRating
+  };
+};
