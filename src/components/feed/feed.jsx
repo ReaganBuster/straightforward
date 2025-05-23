@@ -62,8 +62,8 @@ const SocialFeed = ({ user }) => {
 
   const getTabDescription = () => {
     switch (activeTab) {
-      case 'following':
-        return user?.following?.length > 0 ? 'Posts from users you follow.' : 'Follow users to see their posts.';
+      // case 'following':
+      //   return user?.following?.length > 0 ? 'Posts from users you follow.' : 'Follow users to see their posts.';
       case 'bookmarks':
         return posts.length > 0 ? 'Your saved posts.' : 'No bookmarks yet. Save posts to see them here.';
       case 'liked':
@@ -92,12 +92,12 @@ const SocialFeed = ({ user }) => {
               >
                 Discover
               </button>
-              <button 
+              {/* <button 
                 className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'following' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => handleTabChange('following')}
               >
                 Following
-              </button>
+              </button> */}
               <button 
                 className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'bookmarks' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => handleTabChange('bookmarks')}
