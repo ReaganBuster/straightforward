@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, MessageSquare, Bell, DollarSign, User } from 'lucide-react';
+import { Home, MessageSquare, Bell, DollarSign, Wallet, User } from 'lucide-react';
 
 const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
   const navItems = [
@@ -23,8 +23,8 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     },
     {
       to: '/transactions',
-      icon: <DollarSign size={24} />,
-      label: 'Transactions',
+      icon: <Wallet size={24} />,
+      label: 'Wallet',
       badge: null
     },
     // {

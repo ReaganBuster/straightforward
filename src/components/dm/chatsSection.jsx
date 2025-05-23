@@ -110,21 +110,21 @@ const ChatsSection = ({
               <div className="relative">
                 <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
                   <img 
-                    src={chat.recipient.avatar || "/api/placeholder/40/40"} 
-                    alt={chat.recipient.name} 
+                    src={ "/api/placeholder/40/40"} 
+                    alt={'User Avatar'} 
                     className="w-full h-full object-cover"
                   />
                 </div>
-                {chat.recipient.online && (
+                {/* {chat.recipient.online && (
                   <div className="w-3 h-3 bg-green-500 rounded-full absolute right-0 bottom-0 border border-white"></div>
-                )}
+                )} */}
               </div>
               
               <div className="ml-3 flex-1">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center">
                     <h4 className={`font-medium text-sm ${chat.unread_count > 0 ? 'text-gray-900' : 'text-gray-700'}`}>
-                      {chat.recipient.name}
+                      {'user'}
                     </h4>
                     {chat.recipient.verified && (
                       <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center ml-1">
