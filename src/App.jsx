@@ -2,13 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useRecoilValue } from 'recoil';
 import { userAtom } from './state/authAtom';
 
-import Navbar from './components/layout/Navbar';
 import Feed from './pages/Feed';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Login from './pages/auth/Login';
-import Signup  from './pages/auth/Signup';
+import Signup from './pages/auth/Signup';
 import { useAuthListener } from './hooks/useAuthListener';
 import TransactionsPage from './pages/Transactions';
 import DirectMessages from './components/dm/directMessaging';
@@ -16,36 +15,37 @@ import Messages from './pages/messages';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/notifications';
 import HelpScreen from './pages/help';
+import AuthenticatedLayout from './pages/authenticatedLayout';
 
 const App = () => {
   useAuthListener();
   const { user, loading } = useRecoilValue(userAtom);
 
   if (loading) {
-    
     return <div>Loading...</div>;
   }
 
-
   return (
     <Router>
-      {/* {user && <Navbar />} */}
       <Routes>
         <Route path="/" element={user ? <Navigate to="/feed" /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/feed" /> : <Signup />} />
-        <Route path="/feed" element={user ? <Feed user={user}/> : <Navigate to="/" />} />
-        <Route path="/chat" element={user ? <Chat /> : <Navigate to="/" />} />
-        <Route path="/notifications" element={user ? <Notifications user={user} /> : <Navigate to="/" />} />
-        <Route path="/m/:id" element={user ? <Messages user={user}/> : <Navigate to="/" />} />
-        <Route path="/analytics" element={user ? <Analytics user={user} /> : <Navigate to="/" />} />
-        <Route path="/transactions" element={user ? <TransactionsPage /> : <Navigate to="/" />} />
-        <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/" />} />
-        <Route path="/settings" element={user ? <Settings user={user}/> : <Navigate to="/" />} />
-        <Route path="/help" element={user ? <HelpScreen /> : <Navigate to="/" />} />
-        <Route path="*" element={<div className="p-6">404: Not Found</div>} />
-      </Routes>
+        <Route path="/settings" element={user ? <Settings user={user} /> : <Navigate to='/'/>} />
+        <Route element={user ? <AuthenticatedLayout user={user} /> : <Navigate to="/" />}>
+            <Route path="/feed" element={<Feed user={user} />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/notifications" element={<Notifications user={user} />} />
+            <Route path="/m/:id" element={<Messages user={user} />} />
+            <Route path="/analytics" element={<Analytics user={user} />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/profile" element={<Profile user={user} />} />
+            <Route path="/help" element={<HelpScreen />} />
+          </Route>
+          <Route path="*" element={<div className="p-6">404: Not Found</div>} />
+      </Routes> 
     </Router>
   );
 };
+
 
 export default App;

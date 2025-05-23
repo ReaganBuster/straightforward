@@ -108,7 +108,7 @@ export const useProfile = (userId) => {
   return { profile, loading, error, updateProfile };
 };
 
-// Updated Feed Posts hook to include content unlocking
+// Updated Feed Posts hook
 export const useFeedPosts = (userId, initialFeedType = 'discover') => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +214,6 @@ export const useFeedPosts = (userId, initialFeedType = 'discover') => {
     }
   };
 
-  // New method to unlock premium content
   const unlockContent = async (postId, amount) => {
     try {
       const result = await supabaseQueries.unlockPremiumContent(userId, postId, amount);
@@ -255,7 +254,8 @@ export const useFeedPosts = (userId, initialFeedType = 'discover') => {
   };
 };
 
-export const useUserPosts = (userId, initialContentType = 'media') => {
+// Updated User Posts hook
+export const useUserPosts = (userId, initialContentType = 'all') => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -264,7 +264,6 @@ export const useUserPosts = (userId, initialContentType = 'media') => {
   const [contentType, setContentType] = useState(initialContentType);
   const [totalCount, setTotalCount] = useState(0);
   
-  // Fetch posts function
   const fetchPosts = useCallback(async (reset = false) => {
     try {
       setLoading(true);
@@ -290,35 +289,30 @@ export const useUserPosts = (userId, initialContentType = 'media') => {
     }
   }, [userId, page, contentType]);
   
-  // Initial fetch
   useEffect(() => {
     if (userId) {
       fetchPosts(true);
     }
   }, [userId, contentType, fetchPosts]);
   
-  // Function to change content type
   const changeContentType = (type) => {
-    if (type !== contentType) {
+    if (['all', 'monetized', 'free'].includes(type) && type !== contentType) {
       setContentType(type);
     }
   };
   
-  // Function to load more posts
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
       setPage(prevPage => prevPage + 1);
     }
   }, [loading, hasMore]);
   
-  // Load more when page changes
   useEffect(() => {
     if (page > 1) {
       fetchPosts();
     }
   }, [fetchPosts, page]);
   
-  // Subscription to real-time updates for the user's posts
   useEffect(() => {
     if (!userId) return;
     
@@ -329,8 +323,7 @@ export const useUserPosts = (userId, initialContentType = 'media') => {
         schema: 'public',
         table: 'posts',
         filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        // Refresh posts on any change
+      }, () => {
         fetchPosts(true);
       })
       .subscribe();
@@ -351,7 +344,7 @@ export const useUserPosts = (userId, initialContentType = 'media') => {
   };
 };
 
-// Conversations hooks - Keep as is
+// Conversations hooks
 export const useConversations = (userId) => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -360,7 +353,7 @@ export const useConversations = (userId) => {
   useEffect(() => {
     const fetchConversations = async () => {
       if (!userId) return;
-      
+
       try {
         setLoading(true);
         const conversationsData = await supabaseQueries.getUserConversations(userId);
@@ -377,7 +370,7 @@ export const useConversations = (userId) => {
 
   const refreshConversations = async () => {
     if (!userId) return;
-    
+
     try {
       setLoading(true);
       const conversationsData = await supabaseQueries.getUserConversations(userId);
@@ -392,8 +385,8 @@ export const useConversations = (userId) => {
   return { conversations, loading, error, refreshConversations };
 };
 
-// Update conversation messages hook for DM access checking
-export const useConversationMessages = (conversationId, userId) => {
+// Conversation messages hook
+export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -401,43 +394,57 @@ export const useConversationMessages = (conversationId, userId) => {
   const [hasMore, setHasMore] = useState(true);
   const [dmAccess, setDmAccess] = useState(null);
 
+  const initializeConversation = useCallback(async () => {
+    if (!initiatorId || !recipientId || !userId) {
+      setError('Missing required user IDs');
+      setLoading(false);
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      // Check DM access (requires conversation_id, so we need to fetch it temporarily)
+      const { conversation_id: convoId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+      const access = await supabaseQueries.checkDmAccess(convoId, userId);
+      setDmAccess(access);
+
+      // Fetch initial messages
+      const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, 1, 20);
+      setMessages(messagesData);
+      setHasMore(messagesData.length === 20);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [initiatorId, recipientId, userId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isMounted) {
+      initializeConversation();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [initializeConversation]);
+
   const fetchMessages = useCallback(async (pageNum = 1) => {
-    if (!conversationId || !userId) return;
-    
+    if (!initiatorId || !recipientId || !userId) return;
     try {
       setLoading(true);
       const pageSize = 20;
-      const messagesData = await supabaseQueries.getConversationMessages(
-        conversationId, 
-        userId,
-        pageNum,
-        pageSize
-      );
-      
-      if (pageNum === 1) {
-        setMessages(messagesData);
-      } else {
-        setMessages(prev => [...messagesData, ...prev]);
-      }
-      
+      const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, pageNum, pageSize);
+      setMessages(prev => pageNum === 1 ? messagesData : [...prev, ...messagesData]);
       setHasMore(messagesData.length === pageSize);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [conversationId, userId]);
-
-  useEffect(() => {
-    fetchMessages(1);
-    
-    // Check DM access
-    if (conversationId) {
-      supabaseQueries.checkDmAccess(conversationId, userId)
-        .then(access => setDmAccess(access))
-        .catch(err => console.error("Error checking DM access:", err));
-    }
-  }, [conversationId, userId, fetchMessages]);
+  }, [initiatorId, recipientId, userId]);
 
   const loadMoreMessages = () => {
     if (loading || !hasMore) return;
@@ -445,38 +452,21 @@ export const useConversationMessages = (conversationId, userId) => {
     fetchMessages(page + 1);
   };
 
-  const sendMessage = async (recipientId, content, postId = null) => {
+  const sendMessage = async (recipientId, content, replyToMessageId = null) => {
     try {
-      let activeConversationId = conversationId;
-      
-      if (!activeConversationId) {
-        // Start a new conversation if needed
-        activeConversationId = await supabaseQueries.startConversation(userId, recipientId, 0);
-      }
-      
-      const result = await supabaseQueries.sendMessage(
-        activeConversationId, 
-        userId, 
-        recipientId, 
+      const result = await supabaseQueries.sendMessage(initiatorId, recipientId, userId, content, replyToMessageId);
+      setMessages(prevMessages => [{
+        message_id: result.message_id,
+        sender_id: userId,
         content,
-        postId
-      );
-      
-      if (result) {
-        setMessages(prevMessages => [{
-          message_id: result.message_id,
-          sender_id: userId,
-          content,
-          created_at: result.created_at,
-          is_read: false,
-          is_paid: result.is_paid,
-          requires_payment: result.requires_payment,
-          is_current_user: true,
-          amount: result.amount,
-          related_post_id: postId
-        }, ...prevMessages]);
-      }
-      
+        created_at: result.created_at,
+        is_read: false,
+        content_type: 'text',
+        reply_to_message_id: replyToMessageId,
+        is_current_user: true,
+        requires_payment: result.requires_payment,
+        amount: result.amount,
+      }, ...prevMessages]);
       return result;
     } catch (err) {
       setError(err.message);
@@ -487,17 +477,13 @@ export const useConversationMessages = (conversationId, userId) => {
   const processPayment = async (messageId) => {
     try {
       const success = await supabaseQueries.processMessagePayment(messageId, userId);
-      
       if (success) {
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.message_id === messageId 
-              ? { ...msg, is_paid: true, requires_payment: false } 
-              : msg
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.message_id === messageId ? { ...msg, is_paid: true, requires_payment: false } : msg
           )
         );
       }
-      
       return success;
     } catch (err) {
       setError(err.message);
@@ -505,12 +491,10 @@ export const useConversationMessages = (conversationId, userId) => {
     }
   };
 
-  const requestDmAccess = async (recipientId, postId = null, amount = null) => {
+  const requestDmAccess = async (recipientId, amount = null, postId = null) => {
     try {
       const result = await supabaseQueries.requestDmAccess(userId, recipientId, amount, postId);
-      if (result.success) {
-        setDmAccess({ has_access: true, paid_amount: amount });
-      }
+      if (result.success) setDmAccess({ has_access: true, paid_amount: amount });
       return result;
     } catch (err) {
       setError(err.message);
@@ -518,9 +502,13 @@ export const useConversationMessages = (conversationId, userId) => {
     }
   };
 
-  return { 
-    messages, 
-    loading, 
+  const addInitialMessage = (message) => {
+    setMessages(prevMessages => [message, ...prevMessages]);
+  };
+
+  return {
+    messages,
+    loading,
     error,
     hasMore,
     dmAccess,
@@ -528,11 +516,13 @@ export const useConversationMessages = (conversationId, userId) => {
     sendMessage,
     processPayment,
     requestDmAccess,
-    refreshMessages: () => fetchMessages(1)
+    initializeConversation,
+    refreshMessages: () => fetchMessages(1),
+    addInitialMessage,
   };
 };
 
-// Update wallet hook to handle content unlocks and DM payments
+// Wallet hook
 export const useWallet = (userId) => {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
@@ -548,7 +538,7 @@ export const useWallet = (userId) => {
       
       try {
         setLoading(true);
-        const profileData = await supabaseQueries.getUserProfile(userId);
+        const profileData = await supabaseAuthQueries.getUserProfile(userId);
         if (profileData) {
           setBalance(profileData.balance);
         }
@@ -646,9 +636,9 @@ export const useWallet = (userId) => {
     }
   };
 
-  const payForSubscription = async (creatorId, amount, duration = 30) => {
+  const payForSubscription = async (creatorId, amount, duration = 30, tierId = null) => {
     try {
-      const success = await supabaseQueries.createSubscription(userId, creatorId, amount, duration);
+      const success = await supabaseQueries.createSubscription(userId, creatorId, amount, duration, tierId);
       
       if (success) {
         setBalance(prev => prev - amount);
@@ -676,7 +666,7 @@ export const useWallet = (userId) => {
     payForSubscription,
     refreshBalance: async () => {
       try {
-        const profileData = await supabaseQueries.getUserProfile(userId);
+        const profileData = await supabaseAuthQueries.getUserProfile(userId);
         if (profileData) {
           setBalance(profileData.balance);
         }
@@ -690,38 +680,89 @@ export const useWallet = (userId) => {
   };
 };
 
-// Adjust useCreatePost to include monetization options
+// Create post hook
 export const useCreatePost = () => {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
 
   const create = async (
-    userId, 
-    content, 
-    imageUrl, 
-    isPremium, 
-    topics = [], 
-    monetizationModel = null, 
-    contentFee = null, 
-    dmFee = null, 
-    requiresSubscription = false
+    userId,
+    content,
+    imageUrl,
+    isPremium,
+    topics = [],
+    monetizationModel = null,
+    dmFee = null,
+    requiresSubscription = false,
+    contentType,
+    articleTitle,
+    articlePreview,
+    articleContent,
+    articlePages,
+    articleFormat,
+    articleFileUrl,
+    audioTitle,
+    audioTracks,
+    videoTitle,
+    videoThumbnailUrl,
+    videoUrl,
+    videoDuration,
+    eventTitle,
+    eventDate,
+    eventTime,
+    eventLocation,
+    productTitle,
+    productPrice,
+    productImageUrl,
+    productVariants,
+    productStockStatus,
+    galleryTitle,
+    galleryTotalImages,
+    galleryImages,
+    monetizationRequired
   ) => {
     try {
       setCreating(true);
+      setError(null);
       const postId = await supabaseQueries.createPost(
-        userId, 
-        content, 
-        imageUrl, 
-        isPremium, 
-        topics, 
+        userId,
+        content,
+        imageUrl,
+        isPremium,
+        topics,
         monetizationModel,
-        contentFee,
         dmFee,
-        requiresSubscription
+        requiresSubscription,
+        contentType,
+        articleTitle,
+        // articlePreview,
+        articleContent,
+        articlePages,
+        articleFormat,
+        articleFileUrl,
+        audioTitle,
+        audioTracks,
+        videoTitle,
+        videoThumbnailUrl,
+        videoUrl,
+        videoDuration,
+        eventTitle,
+        eventDate,
+        eventTime,
+        eventLocation,
+        productTitle,
+        productPrice,
+        productImageUrl,
+        productVariants,
+        productStockStatus,
+        galleryTitle,
+        galleryTotalImages,
+        galleryImages,
+        monetizationRequired
       );
-      return postId;
+      return { post_id: postId };
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to create post');
       throw err;
     } finally {
       setCreating(false);
@@ -731,7 +772,7 @@ export const useCreatePost = () => {
   return { create, creating, error };
 };
 
-// Add subscription management hook
+// Subscriptions hook
 export const useSubscriptions = (userId) => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
@@ -795,7 +836,7 @@ export const useSubscriptions = (userId) => {
   };
 };
 
-// Keep other hooks as is
+// Other hooks
 export const useUserStats = (userId) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -885,157 +926,55 @@ export const useTopics = () => {
   return { topics, loading, error };
 };
 
-// Custom hook for managing post ratings
-export const usePostRatings = () => {
+// Post ratings hook (completed)
+export const usePostRatings = (userId) => {
   const [userRatings, setUserRatings] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch user's existing ratings
-  const fetchUserRatings = async (userId) => {
+  const fetchUserRatings = useCallback(async () => {
     if (!userId) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const { data, error } = await supabaseQueries.supabase
+      const { data, error: fetchError } = await supabaseQueries.supabase
         .from('ratings')
         .select('rated_id, score')
         .eq('rater_id', userId);
-        
-      if (error) throw error;
-      
-      // Convert to a map of post_id -> rating score for easy lookup
+
+      if (fetchError) throw fetchError;
+
       const ratingsMap = {};
       data.forEach(rating => {
         ratingsMap[rating.rated_id] = rating.score;
       });
-      
       setUserRatings(ratingsMap);
     } catch (err) {
-      console.error('Error fetching user ratings:', err);
       setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchUserRatings();
+  }, [fetchUserRatings]);
+
+  const rateItem = async (ratedId, score, comment = null) => {
+    try {
+      setIsLoading(true);
+      await supabaseQueries.rateUser(userId, ratedId, score, comment);
+      await fetchUserRatings(); // Refresh ratings after rating
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Rate a post (create or update rating)
-  const ratePost = async (userId, postId, authorId, score, comment = null) => {
-    if (!userId || !postId || !authorId || !score) {
-      setError('Missing required parameters for rating');
-      return null;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Check if user has already rated this post
-      const { data: existingRatings, error: fetchError } = await supabaseClient
-        .from('ratings')
-        .select('rating_id, score')
-        .eq('rater_id', userId)
-        .eq('rated_id', postId);
-        
-      if (fetchError) throw fetchError;
-      
-      let result;
-      
-      if (existingRatings && existingRatings.length > 0) {
-        // Update existing rating
-        const { data, error } = await supabaseClient
-          .from('ratings')
-          .update({ 
-            score,
-            comment: comment,
-            created_at: new Date().toISOString()
-          })
-          .eq('rating_id', existingRatings[0].rating_id)
-          .select();
-          
-        if (error) throw error;
-        result = data;
-      } else {
-        // Create new rating
-        const { data, error } = await supabaseClient
-          .from('ratings')
-          .insert({
-            rater_id: userId,
-            rated_id: postId,
-            score,
-            comment
-          })
-          .select();
-          
-        if (error) throw error;
-        result = data;
-      }
-      
-      // Update local state
-      setUserRatings(prev => ({
-        ...prev,
-        [postId]: score
-      }));
-      
-      // Update the post's average rating
-      await updatePostRating(postId);
-      
-      // Update the author's average rating
-      await updateAuthorRating(authorId);
-      
-      return result;
-    } catch (err) {
-      console.error('Error rating post:', err);
-      setError(err.message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Calculate and update the average rating for a post
-  const updatePostRating = async (postId) => {
-    try {
-      // Calculate average rating from ratings table
-      const { data, error } = await supabaseClient
-        .rpc('calculate_post_average_rating', { post_id_param: postId });
-        
-      if (error) throw error;
-      
-      return data;
-    } catch (err) {
-      console.error('Error updating post average rating:', err);
-      setError(err.message);
-      return null;
-    }
-  };
-  
-  // Calculate and update the average rating for an author
-  const updateAuthorRating = async (authorId) => {
-    try {
-      // Calculate average user rating from ratings table
-      const { data, error } = await supabaseClient
-        .rpc('calculate_user_average_rating', { user_id_param: authorId });
-        
-      if (error) throw error;
-      
-      return data;
-    } catch (err) {
-      console.error('Error updating author average rating:', err);
-      setError(err.message);
-      return null;
-    }
-  };
-
-  return {
-    userRatings,
-    isLoading,
-    error,
-    fetchUserRatings,
-    ratePost,
-    updatePostRating,
-    updateAuthorRating
-  };
+  return { userRatings, isLoading, error, rateItem, refreshRatings: fetchUserRatings };
 };

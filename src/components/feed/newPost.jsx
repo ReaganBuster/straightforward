@@ -1,146 +1,108 @@
 import { useState, useRef, useEffect } from 'react';
-import { Image, Lock, Unlock, X, BarChart2, Send, CircleAlert, MessageSquare, DollarSign, Users, FileText, Calendar, Gift, TrendingUp } from 'lucide-react';
+import { 
+  Image, Lock, X, BarChart2, Send, CircleAlert, MessageSquare, 
+  Unlock, ImagePlus, Trash2, Pencil
+} from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { useCreatePost } from '../../hooks/hooks';
 
-const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
-  const [content, setContent] = useState('');
+const NewPost = ({ user, onPostCreated, onClose }) => {
+  const [caption, setCaption] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [showTopicSelector, setShowTopicSelector] = useState(false);
-  const [postFee, setPostFee] = useState(5000);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [contentType, setContentType] = useState('text');
+  const [articleContent, setArticleContent] = useState('');
+  const [articleTitle, setArticleTitle] = useState('');
+  const [audioTracks, setAudioTracks] = useState([{ title: '', url: '' }]);
+  const [audioTitle, setAudioTitle] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoURL, setVideoURL] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [productTitle, setProductTitle] = useState('');
+  const [productPrice, setProductPrice] = useState(0);
+  const [productVariants, setProductVariants] = useState([{ name: '', price: 0 }]);
+  const [galleryTitle, setGalleryTitle] = useState('');
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [isCaptionOnly, setIsCaptionOnly] = useState(false);
   const [monetizationModel, setMonetizationModel] = useState('');
-  const [showMonetizationOptions, setShowMonetizationOptions] = useState(false);
-  const [dmFee, setDmFee] = useState(2000);
-  const [enablePaidDMs, setEnablePaidDMs] = useState(false);
-  const [previewContent, setPreviewContent] = useState('');
-  const [monetizationTypeId, setMonetizationTypeId] = useState(null);
-  const [monetizationTypesList, setMonetizationTypesList] = useState([]);
-  const [selectedMonetizationType, setSelectedMonetizationType] = useState(null);
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  
+  const [contentPrice, setContentPrice] = useState(5000);
+  const [error, setError] = useState(null);
+
   const fileInputRef = useRef(null);
-  
-  // Pre-defined topic suggestions
+  const multipleFileInputRef = useRef(null);
+
+  const { create, creating } = useCreatePost();
+
   const suggestedTopics = [
     'Finance', 'Business', 'Tech', 'Health', 'Education',
     'Marketing', 'Investing', 'Crypto', 'Career', 'Mobile Money'
   ];
 
-  // Monetization models with mapping to new monetization_types
   const monetizationModels = [
-    { 
-      id: 'content_unlock', 
-      name: 'Pay-to-Unlock Post', 
-      icon: <Lock size={14} />,
-      category: 'content'
-    },
-    { 
-      id: 'paid_dm', 
-      name: 'Paid Direct Messaging', 
+    {
+      id: 'paid_dm',
+      name: 'Monetised',
       icon: <MessageSquare size={14} />,
       category: 'messaging'
     },
-    { 
-      id: 'user_subscription', 
-      name: 'Subscription Access', 
-      icon: <Users size={14} />,
-      category: 'subscription'
-    },
-    { 
-      id: 'file_download', 
-      name: 'File Download', 
-      icon: <FileText size={14} />,
-      category: 'content'
-    },
-    { 
-      id: 'tip', 
-      name: 'Tipping Enabled', 
-      icon: <Gift size={14} />,
-      category: 'community'
-    },
-    { 
-      id: 'post_boost', 
-      name: 'Boost This Post', 
-      icon: <TrendingUp size={14} />,
-      category: 'community'
+    {
+      id: 'free',
+      name: 'Free',
+      icon: <Unlock size={14} />,
+      category: 'none'
     }
   ];
 
-  // Fetch monetization types from the database on component mount
-  useEffect(() => {
-    async function fetchMonetizationTypes() {
-      try {
-        const { data, error } = await supabase
-          .from('monetization_types')
-          .select('*')
-          .eq('is_active', true);
-          
-        if (error) throw error;
-        
-        setMonetizationTypesList(data);
-      } catch (err) {
-        console.error('Error fetching monetization types:', err);
-      }
-    }
-    
-    fetchMonetizationTypes();
-  }, []);
+  const contentTypes = [
+    { id: 'text', name: 'Text Article' },
+    { id: 'audio', name: 'Audio Content' },
+    { id: 'video', name: 'Video Content' },
+    { id: 'event', name: 'Event Details' },
+    { id: 'product', name: 'Product Information' },
+    { id: 'gallery', name: 'Image Gallery' }
+  ];
 
-  // Handle monetization model selection effects
   useEffect(() => {
-    if (!monetizationModel) {
+    if (isCaptionOnly || !monetizationModel || monetizationModel === 'free') {
       setIsPremium(false);
-      setEnablePaidDMs(false);
-      setMonetizationTypeId(null);
-      setSelectedMonetizationType(null);
       return;
     }
-    
-    // Find the corresponding monetization type in our fetched list
-    const selectedType = monetizationTypesList.find(type => type.type_code === monetizationModel);
-    setSelectedMonetizationType(selectedType);
-    
-    if (selectedType) {
-      setMonetizationTypeId(selectedType.type_id);
+    if (monetizationModel === 'paid_dm') {
+      setIsPremium(true);
     }
-    
-    // Set appropriate options based on selected monetization model
-    switch(monetizationModel) {
-      case 'content_unlock':
-        setIsPremium(true);
-        setEnablePaidDMs(false);
-        break;
-      case 'paid_dm':
-        setIsPremium(false);
-        setEnablePaidDMs(true);
-        break;
-      case 'user_subscription':
-        setIsPremium(false);
-        setEnablePaidDMs(false);
-        break;
-      case 'file_download':
-        setIsPremium(true);
-        setEnablePaidDMs(false);
-        break;
-      case 'tip':
-      case 'post_boost':
-        setIsPremium(false);
-        setEnablePaidDMs(false);
-        break;
-      default:
-        setIsPremium(false);
-        setEnablePaidDMs(false);
+  }, [monetizationModel, isCaptionOnly]);
+
+  useEffect(() => {
+    if (isCaptionOnly) {
+      setContentType('text');
+      setMonetizationModel('');
+      setIsPremium(false);
+      setContentPrice(5000);
+      setArticleContent('');
+      setArticleTitle('');
+      setAudioTracks([{ title: '', url: '' }]);
+      setAudioTitle('');
+      setVideoTitle('');
+      setVideoURL('');
+      setEventTitle('');
+      setEventDate('');
+      setEventLocation('');
+      setProductTitle('');
+      setProductPrice(0);
+      setProductVariants([{ name: '', price: 0 }]);
+      setGalleryTitle('');
+      setGalleryImages([]);
     }
-  }, [monetizationModel, monetizationTypesList]);
+  }, [isCaptionOnly]);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     if (file.type.startsWith('image/')) {
       setSelectedImage(file);
       const reader = new FileReader();
@@ -150,220 +112,527 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
       setError('Please select an image file');
     }
   };
-  
+
+  const handleMultipleImagesSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length !== files.length) {
+      setError('Please select only image files');
+    }
+    const newGalleryImages = [...galleryImages];
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newGalleryImages.push({
+          file: file,
+          preview: reader.result,
+          caption: ''
+        });
+        setGalleryImages([...newGalleryImages]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeGalleryImage = (index) => {
+    const newImages = [...galleryImages];
+    newImages.splice(index, 1);
+    setGalleryImages(newImages);
+  };
+
+  const updateGalleryImageCaption = (index, caption) => {
+    const newImages = [...galleryImages];
+    newImages[index].caption = caption;
+    setGalleryImages(newImages);
+  };
+
+  const addAudioTrack = () => {
+    setAudioTracks([...audioTracks, { title: '', url: '' }]);
+  };
+
+  const removeAudioTrack = (index) => {
+    const newTracks = [...audioTracks];
+    newTracks.splice(index, 1);
+    setAudioTracks(newTracks);
+  };
+
+  const updateAudioTrack = (index, field, value) => {
+    const newTracks = [...audioTracks];
+    newTracks[index][field] = value;
+    setAudioTracks(newTracks);
+  };
+
+  const addProductVariant = () => {
+    setProductVariants([...productVariants, { name: '', price: 0 }]);
+  };
+
+  const removeProductVariant = (index) => {
+    const newVariants = [...productVariants];
+    newVariants.splice(index, 1);
+    setProductVariants(newVariants);
+  };
+
+  const updateProductVariant = (index, field, value) => {
+    const newVariants = [...productVariants];
+    newVariants[index][field] = value;
+    setProductVariants(newVariants);
+  };
+
   const handleTopicToggle = (topic) => {
-    setSelectedTopics(prev => 
-      prev.includes(topic) 
+    setSelectedTopics(prev =>
+      prev.includes(topic)
         ? prev.filter(t => t !== topic)
         : prev.length < 5 ? [...prev, topic] : prev
     );
-    
     if (!selectedTopics.includes(topic) && selectedTopics.length >= 5) {
       setError('You can only select up to 5 topics');
       setTimeout(() => setError(''), 3000);
     }
   };
-  
+
+  const resetForm = () => {
+    setCaption('');
+    setIsPremium(false);
+    setSelectedImage(null);
+    setImagePreview(null);
+    setSelectedTopics([]);
+    setShowTopicSelector(false);
+    setMonetizationModel('');
+    setContentPrice(5000);
+    setContentType('text');
+    setArticleContent('');
+    setArticleTitle('');
+    setAudioTracks([{ title: '', url: '' }]);
+    setAudioTitle('');
+    setVideoTitle('');
+    setVideoURL('');
+    setEventTitle('');
+    setEventDate('');
+    setEventLocation('');
+    setProductTitle('');
+    setProductPrice(0);
+    setProductVariants([{ name: '', price: 0 }]);
+    setGalleryTitle('');
+    setGalleryImages([]);
+    setIsCaptionOnly(false);
+    setError(null);
+  };
+
+  const handleDismiss = () => {
+    resetForm();
+    onClose && onClose();
+  };
+
   const handleSubmit = async () => {
-    if (!content.trim()) {
-      setError('Please enter some content for your post');
+    if (!caption.trim()) {
+      setError('Please enter a caption for your post');
       return;
     }
-    
-    setIsSubmitting(true);
-    setError('');
-    
+
+    // Validate content fields for non-caption-only posts, regardless of isPremium
+    if (!isCaptionOnly) {
+      switch(contentType) {
+        case 'text':
+          if (!articleContent.trim()) {
+            setError('Please enter article content');
+            return;
+          }
+          break;
+        case 'audio':
+          if (audioTracks.length === 0 || !audioTracks[0].title) {
+            setError('Please add at least one audio track');
+            return;
+          }
+          break;
+        case 'video':
+          if (!videoURL) {
+            setError('Please enter a video URL');
+            return;
+          }
+          break;
+        case 'event':
+          if (!eventTitle || !eventDate || !eventLocation) {
+            setError('Please fill in all required event details');
+            return;
+          }
+          break;
+        case 'product':
+          if (!productTitle || productPrice <= 0) {
+            setError('Please enter product title and price');
+            return;
+          }
+          break;
+        case 'gallery':
+          if (galleryImages.length === 0) {
+            setError('Please add at least one image to your gallery');
+            return;
+          }
+          break;
+        default:
+          setError('Invalid content type');
+          return;
+      }
+    }
+
+    setError(null);
+
     try {
-      // Handle image upload if present
       let imageUrl = null;
       if (selectedImage) {
         const fileExt = selectedImage.name.split('.').pop();
         const fileName = `${user.user_id}-${Date.now()}.${fileExt}`;
         const filePath = `post-images/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
+        const uploadResponse = await supabase.storage
           .from('media')
           .upload(filePath, selectedImage);
-          
-        if (uploadError) throw uploadError;
-        
+        if (uploadResponse.error) {
+          console.error('Image upload error:', uploadResponse.error);
+          throw uploadResponse.error;
+        }
         const { data: urlData } = supabase.storage
           .from('media')
           .getPublicUrl(filePath);
-          
         imageUrl = urlData.publicUrl;
       }
-      
-      // Create post with monetization details
-      const postData = {
-        user_id: user.user_id,
-        content: content,
-        image_url: imageUrl,
-        is_premium: isPremium,
-        trending_category: selectedTopics[0] || 'General',
-        // These are the main changes to support our new schema
-        monetization_model: monetizationModel, // Keep for backward compatibility
-        monetization_type_id: monetizationTypeId,
-        content_fee: isPremium ? postFee : null,
-        dm_fee: enablePaidDMs ? dmFee : null,
-        preview_content: previewContent || null,
-        has_attachments: !!selectedImage,
-        requires_subscription: monetizationModel === 'user_subscription'
-      };
-      
-      // Insert the post
-      const { data: newPostData, error: postError } = await supabase
-        .from('posts')
-        .insert(postData)
-        .select('post_id')
-        .single();
-      
-      if (postError) throw postError;
-      
-      // If there's a monetization type selected, add to monetization_settings
-      if (monetizationTypeId) {
-        // First check if this setting already exists
-        const { data: existingSettings } = await supabase
-          .from('monetization_settings')
-          .select('setting_id')
-          .eq('user_id', user.user_id)
-          .eq('monetization_type_id', monetizationTypeId)
-          .single();
-          
-        if (!existingSettings) {
-          // Create new monetization setting for this user if it doesn't exist
-          const monetizationSetting = {
-            user_id: user.user_id,
-            monetization_type_id: monetizationTypeId,
-            is_enabled: true,
-            price_amount: isPremium ? postFee : (enablePaidDMs ? dmFee : 0),
-            description: `Setting for ${monetizationModel}`,
-          };
-          
-          await supabase
-            .from('monetization_settings')
-            .insert(monetizationSetting);
+
+      let galleryUrls = [];
+      if (!isCaptionOnly && contentType === 'gallery' && galleryImages.length > 0) {
+        for (let i = 0; i < galleryImages.length; i++) {
+          const image = galleryImages[i];
+          const fileExt = image.file.name.split('.').pop();
+          const fileName = `${user.user_id}-gallery-${Date.now()}-${i}.${fileExt}`;
+          const filePath = `gallery-images/${fileName}`;
+          const galleryUploadResponse = await supabase.storage
+            .from('media')
+            .upload(filePath, image.file);
+          if (galleryUploadResponse.error) {
+            console.error('Gallery image upload error:', galleryUploadResponse.error);
+            throw galleryUploadResponse.error;
+          }
+          const { data: urlData } = supabase.storage
+            .from('media')
+            .getPublicUrl(filePath);
+          galleryUrls.push({
+            url: urlData.publicUrl,
+            caption: image.caption || ''
+          });
         }
       }
-      
-      // Insert topics if any
-      if (selectedTopics.length > 0) {
-        const topicInserts = selectedTopics.map(topic => ({
-          post_id: newPostData.post_id,
-          topic: topic
-        }));
-        
-        const { error: topicError } = await supabase
-          .from('post_topics')
-          .insert(topicInserts);
-          
-        if (topicError) throw topicError;
-      }
-      
-      // Reset form and notify parent
-      setContent('');
-      setIsPremium(false);
-      setSelectedImage(null);
-      setImagePreview(null);
-      setSelectedTopics([]);
-      setMonetizationModel('');
-      setEnablePaidDMs(false);
-      setPreviewContent('');
-      setMonetizationTypeId(null);
-      onPostCreated && onPostCreated(newPostData);
-      !inFeed && onClose && onClose();
-      
+
+      const postData = await create(
+        user.user_id,
+        caption,
+        imageUrl,
+        isPremium,
+        selectedTopics,
+        isCaptionOnly ? null : (monetizationModel === 'free' ? null : monetizationModel),
+        isCaptionOnly ? null : (isPremium ? contentPrice : null),
+        false,
+        !isCaptionOnly ? contentType : undefined,
+        !isCaptionOnly && contentType === 'text' ? articleTitle : undefined,
+        !isCaptionOnly && contentType === 'text' ? (caption.substring(0, 100) + (caption.length > 100 ? '...' : '')) : undefined,
+        !isCaptionOnly && contentType === 'text' ? articleContent : undefined,
+        !isCaptionOnly && contentType === 'text' ? Math.ceil(articleContent.length / 2000) : undefined,
+        !isCaptionOnly && contentType === 'text' ? 'text' : undefined,
+        undefined,
+        !isCaptionOnly && contentType === 'audio' ? audioTitle : undefined,
+        !isCaptionOnly && contentType === 'audio' ? JSON.stringify(audioTracks) : undefined,
+        !isCaptionOnly && contentType === 'video' ? videoTitle : undefined,
+        !isCaptionOnly && contentType === 'video' ? imageUrl : undefined,
+        !isCaptionOnly && contentType === 'video' ? videoURL : undefined,
+        undefined,
+        !isCaptionOnly && contentType === 'event' ? eventTitle : undefined,
+        !isCaptionOnly && contentType === 'event' ? eventDate : undefined,
+        undefined,
+        !isCaptionOnly && contentType === 'event' ? eventLocation : undefined,
+        !isCaptionOnly && contentType === 'product' ? productTitle : undefined,
+        !isCaptionOnly && contentType === 'product' ? productPrice : undefined,
+        !isCaptionOnly && contentType === 'product' ? imageUrl : undefined,
+        !isCaptionOnly && contentType === 'product' ? JSON.stringify(productVariants) : undefined,
+        undefined,
+        !isCaptionOnly && contentType === 'gallery' ? galleryTitle : undefined,
+        !isCaptionOnly && contentType === 'gallery' ? galleryUrls.length : undefined,
+        !isCaptionOnly && contentType === 'gallery' ? JSON.stringify(galleryUrls) : undefined,
+        isPremium
+      );
+
+      resetForm();
+      onPostCreated && onPostCreated(postData);
+      onClose && onClose();
     } catch (err) {
       setError(err.message || 'Failed to create post');
-    } finally {
-      setIsSubmitting(false);
+    }
+  };
+
+  const renderContentEditor = () => {
+    switch (contentType) {
+      case 'text':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter article title..."
+              value={articleTitle}
+              onChange={(e) => setArticleTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <textarea
+              placeholder="Enter your full content here..."
+              value={articleContent}
+              onChange={(e) => setArticleContent(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 min-h-32 resize-none"
+            />
+            <div className="text-xs text-right text-gray-500">{articleContent.length} characters</div>
+          </>
+        );
+      case 'audio':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter audio title..."
+              value={audioTitle}
+              onChange={(e) => setAudioTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            {audioTracks.map((track, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Track title"
+                  value={track.title}
+                  onChange={(e) => updateAudioTrack(index, 'title', e.target.value)}
+                  className="flex-1 p-2 border border-gray-200 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Track URL"
+                  value={track.url}
+                  onChange={(e) => updateAudioTrack(index, 'url', e.target.value)}
+                  className="flex-1 p-2 border border-gray-200 rounded-lg"
+                />
+                <button onClick={() => removeAudioTrack(index)} className="text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <button onClick={addAudioTrack} className="text-red-600 text-xs">
+              Add Track
+            </button>
+          </>
+        );
+      case 'video':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter video title..."
+              value={videoTitle}
+              onChange={(e) => setVideoTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Enter video URL..."
+              value={videoURL}
+              onChange={(e) => setVideoURL(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+          </>
+        );
+      case 'event':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter event title..."
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Enter event location..."
+              value={eventLocation}
+              onChange={(e) => setEventLocation(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+            />
+          </>
+        );
+      case 'product':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter product title..."
+              value={productTitle}
+              onChange={(e) => setProductTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <input
+              type="number"
+              placeholder="Enter product price..."
+              value={productPrice}
+              onChange={(e) => setProductPrice(isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            {productVariants.map((variant, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Variant name"
+                  value={variant.name}
+                  onChange={(e) => updateProductVariant(index, 'name', e.target.value)}
+                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                />
+                <input
+                  type="number"
+                  placeholder="Variant price"
+                  value={variant.price}
+                  onChange={(e) => updateProductVariant(index, 'price', isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
+                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                />
+                <button onClick={() => removeProductVariant(index)} className="text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <button onClick={addProductVariant} className="text-red-600 text-xs">
+              Add Variant
+            </button>
+          </>
+        );
+      case 'gallery':
+        return (
+          <>
+            <input
+              type="text"
+              placeholder="Enter gallery title..."
+              value={galleryTitle}
+              onChange={(e) => setGalleryTitle(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
+            />
+            <button
+              onClick={() => multipleFileInputRef.current.click()}
+              className="text-red-600 text-xs mb-2"
+            >
+              Add Images
+            </button>
+            <input
+              type="file"
+              ref={multipleFileInputRef}
+              onChange={handleMultipleImagesSelect}
+              accept="image/*"
+              multiple
+              className="hidden"
+            />
+            {galleryImages.map((image, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <img src={image.preview} alt="Gallery" className="w-16 h-16 object-cover rounded" />
+                <input
+                  type="text"
+                  placeholder="Image caption"
+                  value={image.caption}
+                  onChange={(e) => updateGalleryImageCaption(index, e.target.value)}
+                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                />
+                <button onClick={() => removeGalleryImage(index)} className="text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </>
+        );
+      default:
+        return <div className="text-red-600 text-xs">Unsupported content type</div>;
     }
   };
 
   return (
-    <div className="bg-white rounded-lg">
-      {!inFeed && (
-        <div className="flex justify-between p-3 border-b border-gray-200">
-          <h2 className="font-bold text-gray-900">New Post</h2>
-          <button onClick={onClose} className="text-gray-500">
-            <X size={20} />
+    <div className="bg-white rounded-lg p-3">
+      <div className="flex mb-3">
+        <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+          <img 
+            src={user?.avatar_url || 'https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg'} 
+            alt="Profile" 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              console.warn('Failed to load profile image in NewPost, using fallback');
+              e.target.src = 'https://via.placeholder.com/32';
+            }}
+          />
+        </div>
+        <div className="flex-1">
+          <textarea
+            placeholder="Write a caption or teaser for your post..."
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 min-h-20 resize-none"
+            maxLength={1000}
+          />
+          <div className="text-xs text-right text-gray-500">{caption.length}/1000</div>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <button
+          onClick={() => setIsCaptionOnly(!isCaptionOnly)}
+          className={`flex items-center text-xs px-3 py-1 rounded-full transition ${
+            isCaptionOnly
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+          }`}
+        >
+          <Pencil size={14} className="mr-1" />
+          {isCaptionOnly ? 'Add Content Details' : 'Caption Only'}
+        </button>
+      </div>
+      
+      {imagePreview && (
+        <div className="relative mb-3 rounded-lg overflow-hidden border border-gray-200">
+          <img src={imagePreview} alt="Selected" className="w-full max-h-56 object-contain" />
+          <button 
+            onClick={() => {
+              setSelectedImage(null);
+              setImagePreview(null);
+            }}
+            className="absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white p-1 rounded-full"
+          >
+            <X size={14} />
           </button>
         </div>
       )}
       
-      <div className="p-3">
-        <div className="flex mb-3">
-          <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-            <img 
-              src={user?.profile_avatar_url || "/api/placeholder/32/32"} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="flex-1">
-            <textarea
-              placeholder="Share your insights or ask a question..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 min-h-20 resize-none"
-              maxLength={1000}
-            />
-            <div className="text-xs text-right text-gray-500">{content.length}/1000</div>
-          </div>
-        </div>
-        
-        {imagePreview && (
-          <div className="relative mb-3 rounded-lg overflow-hidden border border-gray-200">
-            <img src={imagePreview} alt="Selected" className="w-full max-h-56 object-contain" />
-            <button 
-              onClick={() => {
-                setSelectedImage(null);
-                setImagePreview(null);
-              }}
-              className="absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white p-1 rounded-full"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-        
-        {selectedTopics.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {selectedTopics.map(topic => (
-              <div key={topic} className="flex items-center bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs">
-                #{topic}
-                <button onClick={() => handleTopicToggle(topic)} className="ml-1">
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {showTopicSelector && (
+      {!isCaptionOnly && (
+        <>
           <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-wrap gap-2">
-              {suggestedTopics.map(topic => (
-                <button
-                  key={topic}
-                  onClick={() => handleTopicToggle(topic)}
-                  className={`px-2 py-0.5 rounded-full text-xs transition ${
-                    selectedTopics.includes(topic)
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  }`}
-                >
-                  #{topic}
-                </button>
+            <div className="text-sm font-medium mb-2 text-gray-700">Content Type</div>
+            <select
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-lg text-gray-700 text-xs"
+            >
+              {contentTypes.map(type => (
+                <option key={type.id} value={type.id}>{type.name}</option>
               ))}
-            </div>
+            </select>
           </div>
-        )}
-        
-        {showMonetizationOptions && (
+
+          <div className="mb-3">
+            <div className="text-sm font-medium mb-1 text-gray-700">Full Content</div>
+            {renderContentEditor()}
+          </div>
+
           <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
             <div className="text-sm font-medium mb-2 text-gray-700">Monetization Options</div>
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-2">
               {monetizationModels.map(model => (
                 <button
                   key={model.id}
@@ -378,146 +647,108 @@ const NewPost = ({ user, onPostCreated, onClose, inFeed = false }) => {
                   {model.name}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {isPremium && (
+            <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-100">
+              <div className="flex items-center text-red-800 mb-2">
+                <Lock size={14} className="mr-1" />
+                <span className="text-sm font-medium">Premium Content - Pay to Access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={contentPrice}
+                  onChange={(e) => setContentPrice(isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
+                  className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 text-xs"
+                  placeholder="Enter price in UGX"
+                />
+                <span className="text-xs text-gray-700">UGX</span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      
+      {selectedTopics.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {selectedTopics.map(topic => (
+            <div key={topic} className="flex items-center bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs">
+              #{topic}
+              <button onClick={() => handleTopicToggle(topic)} className="ml-1">
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {showTopicSelector && (
+        <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex flex-wrap gap-2">
+            {suggestedTopics.map(topic => (
               <button
-                onClick={() => {
-                  setMonetizationModel('');
-                  setIsPremium(false);
-                  setEnablePaidDMs(false);
-                }}
-                className={`px-3 py-1 rounded-full text-xs flex items-center transition ${
-                  !monetizationModel
+                key={topic}
+                onClick={() => handleTopicToggle(topic)}
+                className={`px-2 py-0.5 rounded-full text-xs transition ${
+                  selectedTopics.includes(topic)
                     ? 'bg-red-600 text-white'
                     : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                 }`}
               >
-                <span className="mr-1"><Unlock size={14} /></span>
-                Free (No Monetization)
+                #{topic}
               </button>
-            </div>
-            
-            {/* Show advanced settings toggle only when a monetization type is selected */}
-            {monetizationModel && (
-              <div className="mt-2">
-                <button 
-                  onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                  className="text-xs text-red-600 flex items-center"
-                >
-                  {showAdvancedSettings ? 'Hide' : 'Show'} advanced settings
-                  <span className="ml-1">{showAdvancedSettings ? '▲' : '▼'}</span>
-                </button>
-              </div>
-            )}
-            
-            {/* Advanced Settings Section */}
-            {showAdvancedSettings && monetizationModel === 'content_unlock' && (
-              <div className="mt-2 border-t border-gray-200 pt-2">
-                <div className="text-xs text-gray-700 mb-1">Preview content (shown before unlock)</div>
-                <textarea
-                  placeholder="Add a teaser that will be visible before content unlock..."
-                  value={previewContent}
-                  onChange={(e) => setPreviewContent(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg text-gray-700 text-xs resize-none h-16"
-                  maxLength={200}
-                />
-              </div>
-            )}
+            ))}
           </div>
-        )}
-        
-        {isPremium && (
-          <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-100">
-            <div className="flex items-center text-red-800 mb-1">
-              <Lock size={14} className="mr-1" />
-              <span className="text-sm font-medium">
-                {monetizationModel === 'content_unlock' ? 'Premium Post - Pay to Unlock' : 
-                 monetizationModel === 'file_download' ? 'File Download - Pay to Access' : 
-                 'Premium Content'}
-              </span>
-            </div>
-            
+        </div>
+      )}
+      
+      {error && (
+        <div className="mb-3 p-2 bg-red-50 text-red-800 text-xs rounded-lg flex items-center">
+          <CircleAlert size={14} className="mr-1" />
+          {error}
+        </div>
+      )}
+      
+      <div className="flex justify-between pt-2 border-t border-gray-100">
+        <div className="flex space-x-1 text-red-600">
+          <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => fileInputRef.current.click()}>
+            <Image size={16} />
             <input
-              type="range"
-              min="1000"
-              max="20000"
-              step="1000"
-              value={postFee}
-              onChange={(e) => setPostFee(parseInt(e.target.value))}
-              className="w-full h-2 bg-red-200 rounded-lg appearance-none cursor-pointer mb-1"
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+              accept="image/*"
+              className="hidden"
             />
-            
-            <div className="flex justify-between text-xs text-red-700">
-              <span>1,000</span>
-              <span className="font-medium">{postFee.toLocaleString()} UGX</span>
-              <span>20,000</span>
-            </div>
-          </div>
-        )}
-        
-        {enablePaidDMs && (
-          <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-100">
-            <div className="flex items-center text-red-800 mb-1">
-              <MessageSquare size={14} className="mr-1" />
-              <span className="text-sm font-medium">Paid Direct Messaging</span>
-            </div>
-            
-            <input
-              type="range"
-              min="1000"
-              max="10000"
-              step="500"
-              value={dmFee}
-              onChange={(e) => setDmFee(parseInt(e.target.value))}
-              className="w-full h-2 bg-red-200 rounded-lg appearance-none cursor-pointer mb-1"
-            />
-            
-            <div className="flex justify-between text-xs text-red-700">
-              <span>1,000</span>
-              <span className="font-medium">{dmFee.toLocaleString()} UGX</span>
-              <span>10,000</span>
-            </div>
-          </div>
-        )}
-        
-        {error && (
-          <div className="mb-3 p-2 bg-red-50 text-red-800 text-xs rounded-lg flex items-center">
-            <CircleAlert size={14} className="mr-1" />
-            {error}
-          </div>
-        )}
-        
-        <div className="flex justify-between pt-2 border-t border-gray-100">
-          <div className="flex space-x-1 text-red-600">
-            <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => fileInputRef.current.click()}>
-              <Image size={16} />
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageSelect}
-                accept="image/*"
-                className="hidden"
-              />
-            </button>
-            
-            <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => setShowTopicSelector(!showTopicSelector)}>
-              <BarChart2 size={16} />
-            </button>
-            
-            <button 
-              className={`p-1.5 rounded-full hover:bg-red-50 ${showMonetizationOptions && 'text-red-800 bg-red-50'}`}
-              onClick={() => setShowMonetizationOptions(!showMonetizationOptions)}
-            >
-              <DollarSign size={16} />
-            </button>
-          </div>
+          </button>
           
+          <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => setShowTopicSelector(!showTopicSelector)}>
+            <BarChart2 size={16} />
+          </button>
+        </div>
+        
+        <div className="flex space-x-2">
           <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`bg-gradient-to-r from-red-600 to-red-700 text-white px-3 py-1 rounded-full text-sm flex items-center ${
-              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:from-red-700 hover:to-red-800'
+            onClick={handleDismiss}
+            disabled={creating}
+            className={`bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center ${
+              creating ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-300'
             }`}
           >
-            {isSubmitting ? (
+            <X size={14} className="mr-1" />
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={creating}
+            className={`bg-gradient-to-r from-red-600 to-red-700 text-white px-3 py-1 rounded-full text-sm flex items-center ${
+              creating ? 'opacity-70 cursor-not-allowed' : 'hover:from-red-700 hover:to-red-800'
+            }`}
+          >
+            {creating ? (
               <>
                 <div className="animate-spin h-3 w-3 border-2 border-white mr-1 rounded-full"></div>
                 Posting...
