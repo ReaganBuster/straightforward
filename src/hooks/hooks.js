@@ -345,47 +345,6 @@ export const useUserPosts = (userId, initialContentType = 'all') => {
 };
 
 // Conversations hooks
-export const useConversations = (userId) => {
-  const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchConversations = async () => {
-      if (!userId) return;
-
-      try {
-        setLoading(true);
-        const conversationsData = await supabaseQueries.getUserConversations(userId);
-        setConversations(conversationsData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConversations();
-  }, [userId]);
-
-  const refreshConversations = async () => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      const conversationsData = await supabaseQueries.getUserConversations(userId);
-      setConversations(conversationsData);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { conversations, loading, error, refreshConversations };
-};
-
-// Conversation messages hook
 export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -394,6 +353,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [hasMore, setHasMore] = useState(true);
   const [dmAccess, setDmAccess] = useState(null);
 
+  // Initialize the conversation and fetch initial messages
   const initializeConversation = useCallback(async () => {
     if (!initiatorId || !recipientId || !userId) {
       setError('Missing required user IDs');
@@ -403,12 +363,10 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
 
     try {
       setLoading(true);
-      // Check DM access (requires conversation_id, so we need to fetch it temporarily)
       const { conversation_id: convoId } = await supabaseQueries.startConversation(initiatorId, recipientId);
       const access = await supabaseQueries.checkDmAccess(convoId, userId);
       setDmAccess(access);
 
-      // Fetch initial messages
       const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, 1, 20);
       setMessages(messagesData);
       setHasMore(messagesData.length === 20);
@@ -430,6 +388,55 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
       isMounted = false;
     };
   }, [initializeConversation]);
+
+  // Set up Supabase Realtime subscription for new messages
+  useEffect(() => {
+    if (!initiatorId || !recipientId || !userId) return;
+
+    let subscription;
+
+    const setupRealtimeSubscription = async () => {
+      const { conversation_id: conversationId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+
+      subscription = supabaseQueries.supabase
+        .channel(`messages-${conversationId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const newMessage = payload.new;
+            setMessages(prevMessages => [
+              {
+                message_id: newMessage.message_id,
+                sender_id: newMessage.from_user_id,
+                content: newMessage.message,
+                created_at: newMessage.created_at,
+                is_read: newMessage.is_read,
+                content_type: newMessage.content_type || 'text',
+                reply_to_message_id: newMessage.reply_to_message_id,
+                is_current_user: newMessage.from_user_id === userId,
+                conversation_id: newMessage.conversation_id,
+              },
+              ...prevMessages,
+            ]);
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtimeSubscription();
+
+    return () => {
+      if (subscription) {
+        supabaseQueries.supabase.removeChannel(subscription);
+      }
+    };
+  }, [initiatorId, recipientId, userId]);
 
   const fetchMessages = useCallback(async (pageNum = 1) => {
     if (!initiatorId || !recipientId || !userId) return;
@@ -455,18 +462,6 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const sendMessage = async (recipientId, content, replyToMessageId = null) => {
     try {
       const result = await supabaseQueries.sendMessage(initiatorId, recipientId, userId, content, replyToMessageId);
-      setMessages(prevMessages => [{
-        message_id: result.message_id,
-        sender_id: userId,
-        content,
-        created_at: result.created_at,
-        is_read: false,
-        content_type: 'text',
-        reply_to_message_id: replyToMessageId,
-        is_current_user: true,
-        requires_payment: result.requires_payment,
-        amount: result.amount,
-      }, ...prevMessages]);
       return result;
     } catch (err) {
       setError(err.message);
