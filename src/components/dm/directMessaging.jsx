@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Play, Pause, Calendar, Download, QrCode, ChevronLeft, Music, Video, 
   FileText, X, Heart, MessageCircle, Image, ShoppingBag, Gift, 
-  Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Mic, Paperclip,
-  AlertCircle, RefreshCw
+  Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Mic, Paperclip
 } from 'lucide-react';
 
 import { useConversationMessages } from '../../hooks/hooks';
@@ -22,29 +21,26 @@ export default function Messages({ user }) {
     messages, 
     loading, 
     error, 
-    hasMore,
-    dmAccess,
-    connectionStatus,
+    hasMore, 
     loadMoreMessages, 
     sendMessage, 
-    processPayment,
-    requestDmAccess,
     initializeConversation,
-    // refreshMessages,
-    // addInitialMessage,
-    retryConnection,
   } = useConversationMessages(user.id, recipientId, user.id);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Initialize conversation automatically
+  // Initialize conversation automatically (create if new, fetch if exists)
   useEffect(() => {
     if (!recipientId || !user.id) {
-      navigate('/feed', { replace: true });
+      navigate('/feed', { replace: true }); // Only redirect if IDs are missing
       return;
     }
-  }, [recipientId, user.id, navigate]);
+    const ensureConversation = async () => {
+      await initializeConversation(); // Let the hook handle create/fetch
+    };
+    ensureConversation();
+  }, [recipientId, user.id, initializeConversation, navigate]);
 
   // Scroll to the bottom when new messages are added
   useEffect(() => {
@@ -55,27 +51,18 @@ export default function Messages({ user }) {
 
   // Infinite scroll handler
   useEffect(() => {
-  const handleScroll = async () => {
-    if (messagesContainerRef.current?.scrollTop < 50 && hasMore && !loading && loadMoreMessages) {
-      setIsLoadingMore(true);
-      try {
-        await loadMoreMessages();
-      } catch (error) {
-        console.error('Failed to load more messages:', error);
-      } finally {
-        setIsLoadingMore(false);
+    const handleScroll = () => {
+      if (messagesContainerRef.current.scrollTop < 50 && hasMore && !loading) {
+        setIsLoadingMore(true);
+        loadMoreMessages().finally(() => setIsLoadingMore(false));
       }
-    }
-  };
-  
-  const container = messagesContainerRef.current;
-  if (container) {
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }
-}, [hasMore, loading, loadMoreMessages]);
+    };
+    const container = messagesContainerRef.current;
+    container?.addEventListener('scroll', handleScroll);
+    return () => container?.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loading, loadMoreMessages]);
 
-  // Send initial message from content if provided
+  // Send initial message from recipient if content is provided
   useEffect(() => {
     if (!content || messages.length > 0 || loading) return;
     const sendInitialMessage = async () => {
@@ -91,13 +78,6 @@ export default function Messages({ user }) {
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!messageInput.trim()) return;
-    
-    // Check connection status
-    if (connectionStatus !== 'connected') {
-      console.error('WebSocket not connected');
-      return;
-    }
-
     try {
       await sendMessage(recipientId, messageInput, replyingTo?.message_id);
       setMessageInput('');
@@ -115,63 +95,22 @@ export default function Messages({ user }) {
     }
   };
 
-  // Handle payment for paid messages
-  const handlePayment = async (messageId) => {
-    try {
-      await processPayment(messageId);
-    } catch (err) {
-      console.error('Payment failed:', err);
-    }
-  };
-
-  // Handle DM access request
-  const handleDmAccessRequest = async (amount = null, postId = null) => {
-    try {
-      await requestDmAccess(recipientId, amount, postId);
-    } catch (err) {
-      console.error('DM access request failed:', err);
-    }
-  };
-
-  // Enhanced renderContentCard with payment support
+  // Enhanced renderContentCard with fallbacks and styling
   const renderContentCard = (message) => {
     const isRecipient = !message.is_current_user;
     const baseStyles = `max-w-xs md:max-w-md p-3 rounded-lg shadow-sm ${
       isRecipient ? 'bg-white text-gray-900' : 'bg-red-500 text-white'
     }`;
 
-    // Handle paid content
-    if (message.requires_payment && !message.is_paid) {
-      return (
-        <div className={`${baseStyles} bg-yellow-50 border border-yellow-200 text-gray-900`}>
-          <div className="flex items-center mb-2">
-            <Gift size={16} className="text-yellow-500 mr-2" />
-            <span className="text-sm font-medium">Paid Message - ${message.payment_amount}</span>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">
-            This message requires payment to view
-          </p>
-          <button 
-            onClick={() => handlePayment(message.message_id)}
-            className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded text-sm"
-          >
-            Pay to View - ${message.payment_amount}
-          </button>
-        </div>
-      );
-    }
-
     if (!message.content_type || message.content_type === 'text') {
       return (
         <div className={baseStyles}>
-          {message.reply_to_message_id && replyingTo && (
-            <div className="flex mb-2">
+          {message.replyTo && (
+            <div className="flex mb-1">
               <div className="w-1 bg-gray-300 rounded-full mr-2"></div>
               <div className="text-xs text-gray-500 truncate">
-                <span className="font-medium">
-                  {isRecipient ? recipientName : 'You'}: 
-                </span>
-                {replyingTo.content || 'Replied to message'}
+                <span className="font-medium">{isRecipient ? recipientName : 'You'}: </span>
+                {message.replyTo.preview || 'Replied to message'}
               </div>
             </div>
           )}
@@ -184,7 +123,7 @@ export default function Messages({ user }) {
       case 'article':
         return (
           <div className={`${baseStyles} bg-white text-gray-900`}>
-            <div className="border-b border-gray-100 flex justify-between items-center pb-2">
+            <div className="border-b border-gray-100 flex justify-between items-center">
               <div className="flex items-center">
                 <FileText size={16} className="text-red-500" />
                 <span className="ml-2 font-medium">{message.article_title || 'Untitled Article'}</span>
@@ -210,7 +149,7 @@ export default function Messages({ user }) {
       case 'audio':
         return (
           <div className={`${baseStyles} bg-white text-gray-900`}>
-            <div className="border-b border-gray-100 flex justify-between items-center pb-2">
+            <div className="border-b border-gray-100 flex justify-between items-center">
               <div className="flex items-center">
                 <Music size={16} className="text-red-500" />
                 <span className="ml-2 font-medium">{message.audio_title || 'Untitled Audio'}</span>
@@ -234,48 +173,12 @@ export default function Messages({ user }) {
     }
   };
 
-  // Connection status indicator
-  const renderConnectionStatus = () => {
-    switch (connectionStatus) {
-      case 'connecting':
-        return (
-          <div className="flex items-center text-yellow-600 text-xs">
-            <RefreshCw size={12} className="animate-spin mr-1" />
-            Connecting...
-          </div>
-        );
-      case 'connected':
-        return (
-          <div className="flex items-center text-green-600 text-xs">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-            Connected
-          </div>
-        );
-      case 'disconnected':
-      case 'error':
-        return (
-          <div className="flex items-center text-red-600 text-xs">
-            <AlertCircle size={12} className="mr-1" />
-            <span>Disconnected</span>
-            <button 
-              onClick={retryConnection}
-              className="ml-2 text-blue-500 underline hover:text-blue-700"
-            >
-              Retry
-            </button>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   // Format time with EAT timezone
   const formatTime = (createdAt) => {
     return new Date(createdAt).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'Africa/Nairobi',
+      timeZone: 'Africa/Nairobi', // Explicitly set to EAT
     });
   };
 
@@ -286,9 +189,6 @@ export default function Messages({ user }) {
 
   // Avatar fallback
   const getAvatarFallback = (name) => name ? name.charAt(0).toUpperCase() : '?';
-
-  // Check if DMs are restricted and show access request
-  const shouldShowDmAccessRequest = dmAccess && !dmAccess.has_access && dmAccess.requires_payment;
 
   return (
     <div className="bg-gray-100 rounded-lg overflow-hidden shadow-lg flex flex-col w-full h-screen">
@@ -320,8 +220,7 @@ export default function Messages({ user }) {
               )}
             </div>
             <div className="ml-2">
-              <div className="font-medium">{recipientName}</div>
-              {renderConnectionStatus()}
+              <span className="font-medium">{recipientName}</span>
             </div>
           </div>
         </div>
@@ -356,29 +255,9 @@ export default function Messages({ user }) {
           Links
         </button>
       </div>
-
-      {/* DM Access Request Banner */}
-      {shouldShowDmAccessRequest && (
-        <div className="bg-yellow-50 border-b border-yellow-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Gift size={16} className="text-yellow-500 mr-2" />
-              <span className="text-sm text-gray-700">
-                This user requires payment for DMs - ${dmAccess.required_amount}
-              </span>
-            </div>
-            <button
-              onClick={() => handleDmAccessRequest(dmAccess.required_amount)}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm"
-            >
-              Pay to Message
-            </button>
-          </div>
-        </div>
-      )}
       
       {/* Messages Area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pb-16">
         {isLoadingMore && (
           <div className="flex justify-center py-2">
             <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
@@ -390,16 +269,13 @@ export default function Messages({ user }) {
         )}
         
         {error && (
-          <div className="text-center text-red-500 bg-red-50 p-4 rounded-lg">
-            <div className="flex items-center justify-center mb-2">
-              <AlertCircle size={16} className="mr-2" />
-              Error: {error}
-            </div>
+          <div className="text-center text-red-500">
+            Error: {error}
             <button
-              className="text-blue-500 underline hover:text-blue-700"
+              className="ml-2 text-blue-500 underline"
               onClick={() => initializeConversation()}
             >
-              Retry Connection
+              Retry
             </button>
           </div>
         )}
@@ -413,14 +289,14 @@ export default function Messages({ user }) {
                 </span>
               </div>
             ) : (
-              <div className={`flex ${message.is_current_user ? 'justify-end' : 'justify-start'} mb-4`}>
+              <div className={`flex ${message.is_current_user ? 'justify-end' : ''}`}>
                 {!message.is_current_user && (
-                  <div className="relative mr-2">
+                  <div className="relative">
                     {recipientAvatar ? (
                       <img
                         src={recipientAvatar}
                         alt={`${recipientName}'s avatar`}
-                        className="h-8 w-8 rounded-full object-cover"
+                        className="h-8 w-8 rounded-full object-cover mr-2"
                         onError={(e) => {
                           e.target.src = '';
                           e.target.style.backgroundColor = '#f87171';
@@ -428,22 +304,20 @@ export default function Messages({ user }) {
                         }}
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-sm mr-2">
                         {getAvatarFallback(recipientName)}
                       </div>
                     )}
                   </div>
                 )}
-                <div className="max-w-xs md:max-w-md">
+                <div className={`max-w-xs md:max-w-md ${message.content_type !== 'text' ? '' : ''}`}>
                   {renderContentCard(message)}
                   <div className={`text-xs ${message.is_current_user ? 'text-red-200 text-right' : 'text-gray-400'} mt-1`}>
                     {formatTime(message.created_at)}
                   </div>
                 </div>
                 {message.is_current_user && (
-                  <div className="h-8 w-8 rounded-full bg-gray-300 ml-2 flex items-center justify-center">
-                    <User size={16} className="text-gray-600" />
-                  </div>
+                  <div className="h-8 w-8 rounded-full bg-gray-300 ml-2"></div>
                 )}
                 <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white rounded-full shadow hidden group-hover:flex items-center px-1">
                   <button className="p-1 hover:text-red-500">
@@ -467,15 +341,12 @@ export default function Messages({ user }) {
       </div>
       
       {replyingTo && (
-        <div className="bg-gray-50 p-3 flex justify-between items-center border-t border-gray-200">
+        <div className="bg-gray-50 p-2 flex justify-between items-center border-t border-gray-200">
           <div className="flex items-center">
             <div className="w-1 h-4 bg-red-500 rounded-full mr-2"></div>
             <div className="text-sm truncate">
               <span className="text-gray-500">Replying to </span>
               <span className="font-medium">{replyingTo.is_current_user ? 'yourself' : recipientName}</span>
-              <div className="text-xs text-gray-400 truncate max-w-xs">
-                {replyingTo.content}
-              </div>
             </div>
           </div>
           <button 
@@ -487,7 +358,7 @@ export default function Messages({ user }) {
         </div>
       )}
       
-      <div className="p-4 bg-white border-t border-gray-200">
+      <div className="p-4 bg-white border-t border-gray-200 sticky bottom-0 left-0 right-0 z-10">
         <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
           <button className="text-gray-500 mr-2">
             <Paperclip size={18} />
@@ -499,20 +370,17 @@ export default function Messages({ user }) {
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={connectionStatus !== 'connected' || shouldShowDmAccessRequest}
           />
           <div className="flex items-center space-x-2 ml-2">
             <button className="text-gray-500">
               <Mic size={18} />
             </button>
             <button 
-              className={`h-8 w-8 bg-red-500 text-white rounded-full flex items-center justify-center ${
-                connectionStatus !== 'connected' || shouldShowDmAccessRequest ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
-              }`}
+              className={`h-8 w-8 bg-red-500 text-white rounded-full flex items-center justify-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleSendMessage}
-              disabled={connectionStatus !== 'connected' || shouldShowDmAccessRequest}
+              disabled={loading}
             >
-              {connectionStatus === 'connecting' ? (
+              {loading ? (
                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
               ) : (
                 <Send size={16} />
