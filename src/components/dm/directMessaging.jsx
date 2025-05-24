@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Play, Pause, Calendar, Download, QrCode, ChevronLeft, Music, Video, 
   FileText, X, Heart, MessageCircle, Image, ShoppingBag, Gift, 
-  Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Mic, Paperclip
+  Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Paperclip
 } from 'lucide-react';
 
 import { useConversationMessages } from '../../hooks/hooks';
@@ -45,7 +45,7 @@ export default function Messages({ user }) {
 
   // Scroll to the bottom when new messages are added
   useEffect(() => {
-    if (!isLoadingMore) {
+    if (!isLoadingMore && messagesContainerRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoadingMore]);
@@ -95,8 +95,6 @@ export default function Messages({ user }) {
       handleSendMessage();
     }
   };
-
-
 
   // Format time with EAT timezone
   const formatTime = (createdAt) => {

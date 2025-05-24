@@ -408,7 +408,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
       setDmAccess(access);
 
       const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, 1, 20);
-      setMessages(messagesData);
+      setMessages(messagesData.reverse()); // Reverse to show newest at the bottom initially
       setHasMore(messagesData.length === 20);
       return true;
     } catch (err) {
@@ -430,57 +430,65 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   }, [initializeConversation]);
 
   useEffect(() => {
-    if (!initiatorId || !recipientId || !userId) return;
+  if (!initiatorId || !recipientId || !userId) return;
 
-    let subscription;
+  let subscription;
 
-    const setupRealtimeSubscription = async () => {
-      const { conversation_id: conversationId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+  const setupRealtimeSubscription = async () => {
+    const { conversation_id: conversationId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+    console.log(`Attempting to subscribe to channel: messages-${conversationId}`);
 
-      subscription = supabaseQueries.supabase
-        .channel(`messages-${conversationId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'direct_messages',
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          (payload) => {
-            const newMessage = payload.new;
-            setMessages(prevMessages => {
-              if (prevMessages.some(msg => msg.message_id === newMessage.message_id)) {
-                return prevMessages;
-              }
-              return [
-                {
-                  message_id: newMessage.message_id,
-                  sender_id: newMessage.from_user_id,
-                  content: newMessage.message,
-                  created_at: newMessage.created_at,
-                  is_read: newMessage.is_read,
-                  content_type: newMessage.content_type || 'text',
-                  reply_to_message_id: newMessage.reply_to_message_id,
-                  is_current_user: newMessage.from_user_id === userId,
-                  conversation_id: newMessage.conversation_id,
-                },
-                ...prevMessages,
-              ];
-            });
-          }
-        )
-        .subscribe();
-    };
+    subscription = supabaseQueries.supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new;
+          console.log(`New message received: ${newMessage.message_id}`);
+          setMessages(prevMessages => {
+            if (prevMessages.some(msg => msg.message_id === newMessage.message_id)) {
+              return prevMessages;
+            }
+            return [...prevMessages, {
+              message_id: newMessage.message_id,
+              sender_id: newMessage.from_user_id,
+              content: newMessage.message,
+              created_at: newMessage.created_at,
+              is_read: newMessage.is_read,
+              content_type: 'text',
+              reply_to_message_id: newMessage.reply_to_message_id,
+              is_current_user: newMessage.from_user_id === userId,
+              conversation_id: newMessage.conversation_id,
+            }];
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Subscription status for ${conversationId}: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to Realtime channel');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Subscription failed, attempting to resubscribe...');
+          setTimeout(() => setupRealtimeSubscription(), 2000); // Retry after 2 seconds
+        }
+      });
+  };
 
-    setupRealtimeSubscription();
+  setupRealtimeSubscription();
 
-    return () => {
-      if (subscription) {
-        supabaseQueries.supabase.removeChannel(subscription);
-      }
-    };
-  }, [initiatorId, recipientId, userId]);
+  return () => {
+    if (subscription) {
+      // console.log(`Unsubscribing from channel: messages-${conversationId}`);
+      supabaseQueries.supabase.removeChannel(subscription);
+    }
+  };
+}, [initiatorId, recipientId, userId]);
 
   const fetchMessages = useCallback(async (pageNum = 1) => {
     if (!initiatorId || !recipientId || !userId) return;
@@ -488,7 +496,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
       setLoading(true);
       const pageSize = 20;
       const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, pageNum, pageSize);
-      setMessages(prev => pageNum === 1 ? messagesData : [...prev, ...messagesData]);
+      setMessages(prev => [...prev, ...messagesData.reverse()]); // Append and reverse new data
       setHasMore(messagesData.length === pageSize);
     } catch (err) {
       setError(err.message);
@@ -498,12 +506,12 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   }, [initiatorId, recipientId, userId]);
 
   const loadMoreMessages = () => {
-    if (loading || !hasMore) return Promise.resolve(); // Return resolved Promise if no action needed
+    if (loading || !hasMore) return Promise.resolve();
     setPage(prev => prev + 1);
-    return fetchMessages(page + 1); // Return the Promise from fetchMessages
+    return fetchMessages(page + 1);
   };
 
-  const sendMessage = async (recipientId, content, replyToMessageId = null, contentType = 1) => {
+  const sendMessage = async (recipientId, content, replyToMessageId = null) => {
     try {
       const tempMessageId = `temp-${Date.now()}`;
       const optimisticMessage = {
@@ -512,21 +520,21 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
         content,
         created_at: new Date().toISOString(),
         is_read: false,
-        content_type: contentType,
+        content_type: 'text',
         reply_to_message_id: replyToMessageId,
         is_current_user: true,
         conversation_id: null,
       };
-      setMessages(prevMessages => [optimisticMessage, ...prevMessages]);
+      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
 
-      const result = await supabaseQueries.sendMessage(initiatorId, recipientId, userId, content, replyToMessageId, contentType);
+      const result = await supabaseQueries.sendMessage(initiatorId, recipientId, userId, content, replyToMessageId);
       setMessages(prevMessages =>
-        prevMessages.filter(msg => msg.message_id !== tempMessageId)
+        prevMessages.map(msg => msg.message_id === tempMessageId ? { ...result, is_current_user: true } : msg)
       );
       return result;
     } catch (err) {
       setMessages(prevMessages =>
-        prevMessages.filter(msg => msg.message_id === `temp-${Date.now()}`)
+        prevMessages.filter(msg => msg.message_id !== `temp-${Date.now()}`)
       );
       setError(err.message);
       throw err;
@@ -562,7 +570,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   };
 
   const addInitialMessage = (message) => {
-    setMessages(prevMessages => [message, ...prevMessages]);
+    setMessages(prevMessages => [...prevMessages, message]);
   };
 
   return {
