@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Play, Pause, Calendar, Download, QrCode, ChevronLeft, Music, Video, 
-  FileText, X, Heart, MessageCircle, Image, ShoppingBag, Gift, 
+  FileText, X, Heart, MessageCircle, Image, ShoppingBag, Gift, Mic,
   Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Paperclip
 } from 'lucide-react';
 
