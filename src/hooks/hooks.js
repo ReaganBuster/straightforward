@@ -503,7 +503,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
     return fetchMessages(page + 1); // Return the Promise from fetchMessages
   };
 
-  const sendMessage = async (recipientId, content, replyToMessageId = null, contentType = 'text') => {
+  const sendMessage = async (recipientId, content, replyToMessageId = null, contentType = 1) => {
     try {
       const tempMessageId = `temp-${Date.now()}`;
       const optimisticMessage = {
