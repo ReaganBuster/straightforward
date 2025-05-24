@@ -181,88 +181,88 @@ export default function Messages({ user }) {
       
       {/* Messages Area */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pb-16">
-        {isLoadingMore && (
-          <div className="flex justify-center py-2">
-            <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
-          </div>
-        )}
-        
-        {loading && messages.length === 0 && (
-          <div className="text-center text-gray-500">Loading messages...</div>
-        )}
-        
-        {error && (
-          <div className="text-center text-red-500">
-            Error: {error}
-            <button
-              className="ml-2 text-blue-500 underline"
-              onClick={() => initializeConversation()}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-        
-        {messages.map(message => (
-          <div key={message.message_id} className="relative group">
-            {message.type === 'system' ? (
-              <div className="text-center">
-                <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs">
-                  {message.content}
-                </span>
-              </div>
-            ) : (
-              <div className={`flex ${message.is_current_user ? 'justify-end' : ''}`}>
-                {!message.is_current_user && (
-                  <div className="relative">
-                    {recipientAvatar ? (
-                      <img
-                        src={recipientAvatar}
-                        alt={`${recipientName}'s avatar`}
-                        className="h-8 w-8 rounded-full object-cover mr-2"
-                        onError={(e) => {
-                          e.target.src = '';
-                          e.target.style.backgroundColor = '#f87171';
-                          e.target.innerText = getAvatarFallback(recipientName);
-                        }}
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-sm mr-2">
-                        {getAvatarFallback(recipientName)}
-                      </div>
-                    )}
+          {isLoadingMore && (
+            <div className="flex justify-center py-2">
+              <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
+            </div>
+          )}
+          
+          {loading && messages.length === 0 && (
+            <div className="text-center text-gray-500">Loading messages...</div>
+          )}
+          
+          {error && (
+            <div className="text-center text-red-500">
+              Error: {error}
+              <button
+                className="ml-2 text-blue-500 underline"
+                onClick={() => initializeConversation()}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
+          {[...messages].map(message => (
+            <div key={message.message_id} className="relative group">
+              {message.type === 'system' ? (
+                <div className="text-center">
+                  <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs">
+                    {message.content}
+                  </span>
+                </div>
+              ) : (
+                <div className={`flex ${message.is_current_user ? 'justify-end' : ''}`}>
+                  {!message.is_current_user && (
+                    <div className="relative">
+                      {recipientAvatar ? (
+                        <img
+                          src={recipientAvatar}
+                          alt={`${recipientName}'s avatar`}
+                          className="h-8 w-8 rounded-full object-cover mr-2"
+                          onError={(e) => {
+                            e.target.src = '';
+                            e.target.style.backgroundColor = '#f87171';
+                            e.target.innerText = getAvatarFallback(recipientName);
+                          }}
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-sm mr-2">
+                          {getAvatarFallback(recipientName)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className={`max-w-xs md:max-w-md ${message.content_type !== 'text' ? '' : ''}`}>
+                    {RenderContentCard(message, recipientName)}
+                    <div className={`text-xs ${message.is_current_user ? 'text-red-200 text-right' : 'text-gray-400'} mt-1`}>
+                      {formatTime(message.created_at)}
+                    </div>
                   </div>
-                )}
-                <div className={`max-w-xs md:max-w-md ${message.content_type !== 'text' ? '' : ''}`}>
-                  {RenderContentCard(message, recipientName)}
-                  <div className={`text-xs ${message.is_current_user ? 'text-red-200 text-right' : 'text-gray-400'} mt-1`}>
-                    {formatTime(message.created_at)}
+                  {message.is_current_user && (
+                    <div className="h-8 w-8 rounded-full bg-gray-300 ml-2"></div>
+                  )}
+                  <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white rounded-full shadow hidden group-hover:flex items-center px-1">
+                    <button className="p-1 hover:text-red-500">
+                      <Heart size={14} />
+                    </button>
+                    <button 
+                      className="p-1 hover:text-red-500"
+                      onClick={() => setReplyingTo(message)}
+                    >
+                      <MessageCircle size={14} />
+                    </button>
+                    <button className="p-1 hover:text-red-500">
+                      <Share2 size={14} />
+                    </button>
                   </div>
                 </div>
-                {message.is_current_user && (
-                  <div className="h-8 w-8 rounded-full bg-gray-300 ml-2"></div>
-                )}
-                <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white rounded-full shadow hidden group-hover:flex items-center px-1">
-                  <button className="p-1 hover:text-red-500">
-                    <Heart size={14} />
-                  </button>
-                  <button 
-                    className="p-1 hover:text-red-500"
-                    onClick={() => setReplyingTo(message)}
-                  >
-                    <MessageCircle size={14} />
-                  </button>
-                  <button className="p-1 hover:text-red-500">
-                    <Share2 size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-      
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+              
       {replyingTo && (
         <div className="bg-gray-50 p-2 flex justify-between items-center border-t border-gray-200">
           <div className="flex items-center">
