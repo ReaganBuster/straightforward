@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import LeftSidebar from '../components/feed/leftSideBar';
 import BottomNav from '../components/layout/bottomNav';
-import MobileNavBar from '../components/layout/Navbar';
+import Messages from '../pages/messages';
 
 const AuthenticatedLayout = ({ user }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showBottomNav, setShowBottomNav] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
 
   const toggleSidebar = () => {
@@ -15,18 +17,23 @@ const AuthenticatedLayout = ({ user }) => {
 
   const handlers = useSwipeable({
     onSwipedRight: (eventData) => {
-      if (eventData.initial[0] < 20) {
-        setIsMobileSidebarOpen(true);
-      }
+      if (eventData.initial[0] < 20) setIsMobileSidebarOpen(true);
     },
-    onSwipedLeft: () => {
-      setIsMobileSidebarOpen(false);
-    },
+    onSwipedLeft: () => setIsMobileSidebarOpen(false),
     trackMouse: false,
     preventDefaultTouchmoveEvent: true
   });
 
-  // Render Messages component outside main for mobile/tablet, inside for desktop
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setShowBottomNav(currentScrollY < lastScrollY);
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   const isMessagesPage = location.pathname.includes('/messages');
   const isDesktop = window.innerWidth > 1024;
 
@@ -38,11 +45,14 @@ const AuthenticatedLayout = ({ user }) => {
         toggleSidebar={toggleSidebar}
       />
       <div className="flex-1 flex flex-col">
-        <MobileNavBar user={user} toggleSidebar={toggleSidebar} />
         <main className="flex-1">
           {(!isMessagesPage || isDesktop) && <Outlet />}
         </main>
-        {!isDesktop && <BottomNav />}
+        {!isDesktop && showBottomNav && (
+          <div className="transition-opacity duration-300">
+            <BottomNav />
+          </div>
+        )}
       </div>
       {isMessagesPage && !isDesktop && (
         <div className="fixed inset-0 bg-gray-100 z-20">

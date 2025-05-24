@@ -31,11 +31,11 @@ const App = () => {
         <Route path="/" element={user ? <Navigate to="/feed" /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/feed" /> : <Signup />} />
         <Route path="/settings" element={user ? <Settings user={user} /> : <Navigate to='/'/>} />
+        <Route path="/m/:id" element={user ? <Messages user={user} />: <Navigate to="/"/>} />
         <Route element={user ? <AuthenticatedLayout user={user} /> : <Navigate to="/" />}>
             <Route path="/feed" element={<Feed user={user} />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/notifications" element={<Notifications user={user} />} />
-            <Route path="/m/:id" element={<Messages user={user} />} />
             <Route path="/analytics" element={<Analytics user={user} />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/profile" element={<Profile user={user} />} />
@@ -43,6 +43,7 @@ const App = () => {
           </Route>
           <Route path="*" element={<div className="p-6">404: Not Found</div>} />
       </Routes> 
+      
     </Router>
   );
 };
