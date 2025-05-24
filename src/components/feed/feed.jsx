@@ -108,7 +108,7 @@ const SocialFeed = ({ user }) => {
                 className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'liked' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => handleTabChange('liked')}
               >
-                Liked
+                Likes
               </button>
             </div>
           </div>

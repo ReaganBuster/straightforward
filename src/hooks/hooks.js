@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as supabaseQueries from '../services/supabase';
 import * as supabaseAuthQueries from '../services/authenticationService';
 
@@ -345,6 +345,47 @@ export const useUserPosts = (userId, initialContentType = 'all') => {
 };
 
 // Conversations hooks
+export const useConversations = (userId) => {
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!userId) return;
+
+      try {
+        setLoading(true);
+        const conversationsData = await supabaseQueries.getUserConversations(userId);
+        setConversations(conversationsData);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [userId]);
+
+  const refreshConversations = async () => {
+    if (!userId) return;
+
+    try {
+      setLoading(true);
+      const conversationsData = await supabaseQueries.getUserConversations(userId);
+      setConversations(conversationsData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { conversations, loading, error, refreshConversations };
+};
+
+// Conversation messages hook
 export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -352,8 +393,91 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [dmAccess, setDmAccess] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  
+  // Use refs to avoid stale closures and dependency loops
+  const wsRef = useRef(null);
+  const conversationIdRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
 
-  // Initialize the conversation and fetch initial messages
+  // WebSocket connection function
+  const connectWebSocket = useCallback(async (conversationId, token) => {
+    try {
+      // Close existing connection
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+
+      const websocket = new WebSocket(`wss://kontentapi-qpu8.onrender.com/ws/${conversationId}?token=${token}`);
+      wsRef.current = websocket;
+      setConnectionStatus('connecting');
+
+      websocket.onopen = () => {
+        console.log('Connected to WebSocket server');
+        setConnectionStatus('connected');
+        setError(null);
+        reconnectAttemptsRef.current = 0;
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const { type, data } = JSON.parse(event.data);
+          if (type === 'message') {
+            setMessages((prev) => {
+              // Check if message already exists to avoid duplicates
+              const exists = prev.some(msg => msg.message_id === data.message_id);
+              if (exists) return prev;
+              
+              return [{
+                message_id: data.message_id,
+                sender_id: data.sender_id,
+                content: data.content,
+                created_at: data.created_at,
+                is_read: data.is_read,
+                content_type: data.content_type || 'text',
+                reply_to_message_id: data.reply_to_message_id,
+                is_current_user: data.sender_id === userId,
+              }, ...prev];
+            });
+          } else if (type === 'error') {
+            setError(data.message);
+          }
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err);
+        }
+      };
+
+      websocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionStatus('error');
+        setError('WebSocket connection failed');
+      };
+
+      websocket.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
+        setConnectionStatus('disconnected');
+        
+        // Attempt reconnection if not intentionally closed
+        if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1})`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current++;
+            connectWebSocket(conversationId, token);
+          }, delay);
+        }
+      };
+
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      setError('Failed to establish WebSocket connection');
+      setConnectionStatus('error');
+    }
+  }, [userId]);
+
   const initializeConversation = useCallback(async () => {
     if (!initiatorId || !recipientId || !userId) {
       setError('Missing required user IDs');
@@ -363,143 +487,214 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
 
     try {
       setLoading(true);
+      setError(null);
+
+      // Get Supabase session for JWT token
+      const { data: { session } } = await supabaseQueries.supabase.auth.getSession();
+      if (!session) {
+        setError('User not authenticated');
+        return false;
+      }
+
+      // Get or create conversation
       const { conversation_id: convoId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+      conversationIdRef.current = convoId;
+      
+      // Check DM access (for paid messaging)
       const access = await supabaseQueries.checkDmAccess(convoId, userId);
       setDmAccess(access);
 
-      const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, 1, 20);
-      setMessages(messagesData);
-      setHasMore(messagesData.length === 20);
+      // Fetch initial messages using backend polling endpoint
+      const response = await fetch(
+        `https://kontentapi-qpu8.onrender.com/messages/${convoId}?limit=20&offset=0`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.status}`);
+      }
+      
+      const { messages: initialMessages } = await response.json();
+      const formattedMessages = initialMessages.map(msg => ({
+        message_id: msg.message_id,
+        sender_id: msg.from_user_id,
+        content: msg.message,
+        created_at: msg.created_at,
+        is_read: msg.is_read,
+        content_type: msg.content_type || 'text',
+        reply_to_message_id: msg.reply_to_message_id,
+        is_current_user: msg.from_user_id === userId,
+      }));
+      
+      setMessages(formattedMessages);
+      setHasMore(initialMessages.length === 20);
+
+      // Initialize WebSocket connection
+      await connectWebSocket(convoId, session.access_token);
+
       return true;
     } catch (err) {
+      console.error('Error initializing conversation:', err);
       setError(err.message);
       return false;
     } finally {
       setLoading(false);
     }
-  }, [initiatorId, recipientId, userId]);
+  }, [initiatorId, recipientId, userId, connectWebSocket]);
 
+  // Initialize conversation on mount
   useEffect(() => {
     let isMounted = true;
-    if (isMounted) {
-      initializeConversation();
-    }
+    
+    const init = async () => {
+      if (isMounted) {
+        await initializeConversation();
+      }
+    };
+    
+    init();
+
+    // Cleanup function
     return () => {
       isMounted = false;
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Component unmounting');
+        wsRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
   }, [initializeConversation]);
 
-  // Set up Supabase Realtime subscription for new messages
-  useEffect(() => {
-    if (!initiatorId || !recipientId || !userId) return;
-
-    let subscription;
-
-    const setupRealtimeSubscription = async () => {
-      const { conversation_id: conversationId } = await supabaseQueries.startConversation(initiatorId, recipientId);
-
-      subscription = supabaseQueries.supabase
-        .channel(`messages-${conversationId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'direct_messages',
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          (payload) => {
-            const newMessage = payload.new;
-            setMessages(prevMessages => [
-              {
-                message_id: newMessage.message_id,
-                sender_id: newMessage.from_user_id,
-                content: newMessage.message,
-                created_at: newMessage.created_at,
-                is_read: newMessage.is_read,
-                content_type: newMessage.content_type || 'text',
-                reply_to_message_id: newMessage.reply_to_message_id,
-                is_current_user: newMessage.from_user_id === userId,
-                conversation_id: newMessage.conversation_id,
-              },
-              ...prevMessages,
-            ]);
-          }
-        )
-        .subscribe();
-    };
-
-    setupRealtimeSubscription();
-
-    return () => {
-      if (subscription) {
-        supabaseQueries.supabase.removeChannel(subscription);
-      }
-    };
-  }, [initiatorId, recipientId, userId]);
-
   const fetchMessages = useCallback(async (pageNum = 1) => {
-    if (!initiatorId || !recipientId || !userId) return;
+    if (!conversationIdRef.current || !userId) return;
+    
     try {
       setLoading(true);
-      const pageSize = 20;
-      const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, pageNum, pageSize);
-      setMessages(prev => pageNum === 1 ? messagesData : [...prev, ...messagesData]);
-      setHasMore(messagesData.length === pageSize);
+      const offset = (pageNum - 1) * 20;
+      const { data: { session } } = await supabaseQueries.supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      const response = await fetch(
+        `https://kontentapi-qpu8.onrender.com/messages/${conversationIdRef.current}?limit=20&offset=${offset}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.status}`);
+      }
+      
+      const { messages: newMessages } = await response.json();
+      const formattedMessages = newMessages.map(msg => ({
+        message_id: msg.message_id,
+        sender_id: msg.from_user_id,
+        content: msg.message,
+        created_at: msg.created_at,
+        is_read: msg.is_read,
+        content_type: msg.content_type || 'text',
+        reply_to_message_id: msg.reply_to_message_id,
+        is_current_user: msg.from_user_id === userId,
+      }));
+      
+      setMessages(prev => pageNum === 1 ? formattedMessages : [...prev, ...formattedMessages]);
+      setHasMore(newMessages.length === 20);
     } catch (err) {
+      console.error('Error fetching messages:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [initiatorId, recipientId, userId]);
+  }, [userId]);
 
-  const loadMoreMessages = () => {
+  const loadMoreMessages = useCallback(() => {
     if (loading || !hasMore) return;
-    setPage(prev => prev + 1);
-    fetchMessages(page + 1);
-  };
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchMessages(nextPage);
+  }, [loading, hasMore, page, fetchMessages]);
 
-  const sendMessage = async (recipientId, content, replyToMessageId = null) => {
+  const sendMessage = useCallback(async (recipientId, content, replyToMessageId = null) => {
     try {
-      const result = await supabaseQueries.sendMessage(initiatorId, recipientId, userId, content, replyToMessageId);
-      return result;
+      // Check WebSocket connection
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket not connected. Please check your connection.');
+      }
+
+      // Send via WebSocket only - let the backend handle database insertion and broadcasting
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
+        content,
+        to_user_id: recipientId,
+        reply_to_message_id: replyToMessageId,
+      }));
+
+      return { success: true };
     } catch (err) {
+      console.error('Error sending message:', err);
       setError(err.message);
       throw err;
     }
-  };
+  }, []);
 
-  const processPayment = async (messageId) => {
+  const processPayment = useCallback(async (messageId) => {
     try {
       const success = await supabaseQueries.processMessagePayment(messageId, userId);
       if (success) {
-        setMessages(prevMessages =>
-          prevMessages.map(msg =>
+        setMessages(prev =>
+          prev.map(msg =>
             msg.message_id === messageId ? { ...msg, is_paid: true, requires_payment: false } : msg
           )
         );
       }
       return success;
     } catch (err) {
+      console.error('Error processing payment:', err);
       setError(err.message);
       throw err;
     }
-  };
+  }, [userId]);
 
-  const requestDmAccess = async (recipientId, amount = null, postId = null) => {
+  const requestDmAccess = useCallback(async (recipientId, amount = null, postId = null) => {
     try {
       const result = await supabaseQueries.requestDmAccess(userId, recipientId, amount, postId);
-      if (result.success) setDmAccess({ has_access: true, paid_amount: amount });
+      if (result.success) {
+        setDmAccess({ has_access: true, paid_amount: amount });
+      }
       return result;
     } catch (err) {
+      console.error('Error requesting DM access:', err);
       setError(err.message);
       throw err;
     }
-  };
+  }, [userId]);
 
-  const addInitialMessage = (message) => {
-    setMessages(prevMessages => [message, ...prevMessages]);
-  };
+  const addInitialMessage = useCallback((message) => {
+    setMessages(prev => [message, ...prev]);
+  }, []);
+
+  // Retry connection function
+  const retryConnection = useCallback(() => {
+    if (conversationIdRef.current) {
+      reconnectAttemptsRef.current = 0;
+      supabaseQueries.supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          connectWebSocket(conversationIdRef.current, session.access_token);
+        }
+      });
+    }
+  }, [connectWebSocket]);
 
   return {
     messages,
@@ -507,6 +702,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
     error,
     hasMore,
     dmAccess,
+    connectionStatus,
     loadMoreMessages,
     sendMessage,
     processPayment,
@@ -514,6 +710,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
     initializeConversation,
     refreshMessages: () => fetchMessages(1),
     addInitialMessage,
+    retryConnection,
   };
 };
 
