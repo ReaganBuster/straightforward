@@ -1,11 +1,12 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
+import { 
   Heart, Bookmark, Share2, MoreHorizontal, Mail, Star, Activity, Zap
 } from 'lucide-react';
-import { usePostRatings, useIsUserOnline} from '../../hooks/hooks';
+import { usePostRatings } from '../../hooks/hooks';
 import RatingStars from './ratingComponent';
 
+// Memoized to prevent unnecessary re-renders for large feeds
 const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
@@ -15,8 +16,6 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const { userRatings, rateItem, isLoading: isRatingLoading } = usePostRatings(user?.id);
-
-  const isAuthorOnline = useIsUserOnline(post.author?.user_id);
 
   useEffect(() => {
     setIsLiked(post.is_liked || false);
@@ -88,7 +87,6 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   };
 
   const authorInfo = post.author || {};
-
   const formatCurrency = (amount, currency = 'UGX') => `${amount.toLocaleString()} ${currency}`;
 
   const getMonetizationBadge = () => {
@@ -104,23 +102,19 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
     );
   };
 
+  // Fetch topics from post_topics if available
   const topics = post.post_topics ? post.post_topics.map(pt => pt.topic) : [];
 
   return (
     <div className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
       <div className="flex justify-between">
         <div className="flex">
-          <div className="relative w-10 h-10 mr-2">
-            <div className="rounded-full overflow-hidden border border-red-100 w-full h-full">
-              <img 
-                src={authorInfo.avatar_url || 'https://via.placeholder.com/40'} 
-                alt={authorInfo.username} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {isAuthorOnline && (
-              <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
-            )}
+          <div className="w-10 h-10 rounded-full overflow-hidden mr-2 border border-red-100">
+            <img 
+              src={authorInfo.avatar_url || 'https://via.placeholder.com/40'} 
+              alt={authorInfo.username} 
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center">

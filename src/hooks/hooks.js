@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as supabaseQueries from '../services/supabase';
 import * as supabaseAuthQueries from '../services/authenticationService';
 
@@ -354,44 +354,43 @@ export const useOnlineUsers = () => {
     let isSubscribed = false;
     const leaveTimeouts = new Map();
 
+    // Move updateOnlineUsers to the top level of the useEffect, not inside setupPresence
+    const updateOnlineUsers = () => {
+      if (!channel || !isSubscribed) return;
+      const state = channel.presenceState();
+      const online = new Map();
+      Object.entries(state).forEach(([presenceKey, presences]) => {
+        if (presences && Array.isArray(presences) && presences.length > 0) {
+          const presenceData = presences[0];
+          if (presenceData.user_id) {
+            online.set(presenceData.user_id, {
+              user_id: presenceData.user_id,
+              name: presenceData.name,
+              avatar_url: presenceData.avatar_url,
+              online_at: presenceData.online_at,
+              presence_key: presenceKey,
+            });
+          }
+        }
+      });
+      setOnlineUsers(online);
+      console.log('Updated Online Users:', Array.from(online.entries()));
+    };
+
     const setupPresence = async () => {
       try {
         const { data, error } = await supabaseQueries.supabase.auth.getUser();
-        const user = data?.user;
-        if (error || !user) return;
+        if (error || !data?.user) {
+          console.error('Auth error:', error);
+          return;
+        }
+        const user = data.user;
 
         channel = supabaseQueries.supabase.channel('presence:global');
 
-        const updateOnlineUsers = () => {
-          if (!channel || !isSubscribed) return;
-          
-          const state = channel.presenceState();
-          const online = new Map();
-          
-          Object.entries(state).forEach(([presenceKey, presences]) => {
-            if (presences && Array.isArray(presences) && presences.length > 0) {
-              const presenceData = presences[0];
-              if (presenceData.user_id) {
-                online.set(presenceData.user_id, {
-                  user_id: presenceData.user_id,
-                  name: presenceData.name,
-                  avatar_url: presenceData.avatar_url,
-                  online_at: presenceData.online_at,
-                  presence_key: presenceKey
-                });
-              }
-            }
-          });
-          
-          setOnlineUsers(online);
-        };
-
         channel
-          .on('presence', { event: 'sync' }, () => {
-            updateOnlineUsers();
-          })
+          .on('presence', { event: 'sync' }, updateOnlineUsers)
           .on('presence', { event: 'join' }, ({ newPresences }) => {
-            // Clear any pending removal timeout for this user
             newPresences.forEach(presence => {
               if (presence.user_id && leaveTimeouts.has(presence.user_id)) {
                 clearTimeout(leaveTimeouts.get(presence.user_id));
@@ -401,34 +400,40 @@ export const useOnlineUsers = () => {
             updateOnlineUsers();
           })
           .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-            // Delay removal to handle quick reconnects
             leftPresences.forEach(presence => {
               if (presence.user_id) {
                 const timeout = setTimeout(() => {
                   updateOnlineUsers();
                   leaveTimeouts.delete(presence.user_id);
-                }, 60000); // 1 minute grace period
+                }, 60000); // 1-minute grace period
                 leaveTimeouts.set(presence.user_id, timeout);
               }
             });
           });
 
-        await channel.subscribe(async (status) => {
+        const { data: subscription } = await channel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             isSubscribed = true;
-            
             await channel.track({
               user_id: user.id,
               name: user.user_metadata?.name || user.email || 'Anonymous',
               avatar_url: user.user_metadata?.avatar_url || null,
               online_at: new Date().toISOString(),
             });
-            
-            // Initial sync
-            setTimeout(updateOnlineUsers, 200);
+            // Force immediate update after tracking
+            updateOnlineUsers();
+          } else if (status === 'CLOSED' || status === 'TIMED_OUT') {
+            console.warn('Subscription Failed:', status);
           }
         });
 
+        return () => {
+          isSubscribed = false;
+          subscription?.unsubscribe();
+          channel?.untrack();
+          leaveTimeouts.forEach(timeout => clearTimeout(timeout));
+          leaveTimeouts.clear();
+        };
       } catch (error) {
         console.error('Setup presence error:', error);
       }
@@ -437,12 +442,10 @@ export const useOnlineUsers = () => {
     setupPresence();
 
     return () => {
-      isSubscribed = false;
       if (channel) {
         channel.untrack();
         channel.unsubscribe();
       }
-      // Clear all timeouts
       leaveTimeouts.forEach(timeout => clearTimeout(timeout));
       leaveTimeouts.clear();
     };
@@ -451,14 +454,13 @@ export const useOnlineUsers = () => {
   return onlineUsers;
 };
 
-// Simple hook for checking if a user is online
+// Optimized hook to check user online status
 export const useIsUserOnline = (userId) => {
   const onlineUsers = useOnlineUsers();
-  const [isOnline, setIsOnline] = useState(false);
 
-  useEffect(() => {
-    const online = onlineUsers.has(userId);
-    setIsOnline(online);
+  // Memoize the online status to avoid unnecessary re-renders
+  const isOnline = useMemo(() => {
+    return userId ? onlineUsers.has(userId) : false;
   }, [onlineUsers, userId]);
 
   return isOnline;
