@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, Bookmark, Share2, MoreHorizontal, Mail, Star, Activity, Zap
 } from 'lucide-react';
+import { debounce } from 'lodash';
 import { usePostRatings, useOnlineUsers } from '../../hooks/hooks';
 import RatingStars from './ratingComponent';
 
@@ -17,10 +18,20 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const { userRatings, rateItem, isLoading: isRatingLoading } = usePostRatings(user?.id);
   const onlineUsers = useOnlineUsers();
 
-  const isAuthorOnline = useMemo(() => {
-    return onlineUsers.has(post.author?.user_id);
-  }, [onlineUsers, post.author?.user_id]);
+  const [isAuthorOnline, setIsAuthorOnline] = useState(
+    onlineUsers.has(post.author?.user_id)
+  );
 
+  useEffect(() => {
+    const isOnline = onlineUsers.has(post.author?.user_id);
+    setIsAuthorOnline(prev => {
+      if (prev !== isOnline) {
+        return isOnline;
+      }
+      return prev;
+    });
+  }, [onlineUsers, post.author?.user_id]);
+  
   useEffect(() => {
     setIsLiked(post.is_liked || false);
     setLikeCount(post.like_count || 0);
