@@ -4,7 +4,7 @@ import {
   Play, Pause, Calendar, Download, QrCode, ChevronLeft, Music, Video, 
   FileText, X, Heart, MessageCircle, Image, ShoppingBag, Gift, Mic,
   Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Paperclip,
-  MoreVertical, Smile
+  MoreVertical, Smile, Plus
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import { useConversationMessages } from '../../hooks/hooks';
@@ -19,10 +19,13 @@ export default function Messages({ user, onlineUsers }) {
   const [hoveredMessage, setHoveredMessage] = useState(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  
   const location = useLocation();
   const { recipientId, recipientName, recipientAvatar, content } = location.state || {};
   const navigate = useNavigate();
-  const onlineStatus = onlineUsers.has(recipientId); // Check if recipientId is in onlineUsers
+  const onlineStatus = onlineUsers.has(recipientId);
 
   const { 
     messages, 
@@ -36,6 +39,8 @@ export default function Messages({ user, onlineUsers }) {
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const previousScrollHeight = useRef(0);
 
   useEffect(() => {
     if (!recipientId || !user.id) {
@@ -49,22 +54,40 @@ export default function Messages({ user, onlineUsers }) {
   }, [recipientId, user.id, initializeConversation, navigate]);
 
   useEffect(() => {
-    if (!isLoadingMore && messagesContainerRef.current) {
+    if (!isLoadingMore && shouldScrollToBottom && messagesContainerRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isLoadingMore]);
+  }, [messages, isLoadingMore, shouldScrollToBottom]);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (messagesContainerRef.current.scrollTop < 50 && hasMore && !loading) {
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      // Check if user is near the bottom (within 100px)
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      setShouldScrollToBottom(isNearBottom);
+
+      // Load more messages when scrolling to top
+      if (container.scrollTop < 50 && hasMore && !loading && !isLoadingMore) {
         setIsLoadingMore(true);
-        loadMoreMessages().finally(() => setIsLoadingMore(false));
+        previousScrollHeight.current = container.scrollHeight;
+        loadMoreMessages().finally(() => {
+          setIsLoadingMore(false);
+          // Maintain scroll position after loading
+          setTimeout(() => {
+            const newScrollHeight = container.scrollHeight;
+            const scrollDifference = newScrollHeight - previousScrollHeight.current;
+            container.scrollTop = container.scrollTop + scrollDifference;
+          }, 50);
+        });
       }
     };
+
     const container = messagesContainerRef.current;
     container?.addEventListener('scroll', handleScroll);
     return () => container?.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loading, loadMoreMessages]);
+  }, [hasMore, loading, loadMoreMessages, isLoadingMore]);
 
   useEffect(() => {
     if (!content || messages.length > 0 || loading) return;
@@ -78,9 +101,23 @@ export default function Messages({ user, onlineUsers }) {
     sendInitialMessage();
   }, [content, messages.length, loading, sendMessage, recipientId]);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        setShowMoreMenu(false);
+        setShowEmojiPicker(false);
+        setShowAttachmentMenu(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   const handleSendMessage = async () => {
     if (!messageInput.trim()) return;
     setIsTyping(true);
+    setShouldScrollToBottom(true);
     try {
       await sendMessage(recipientId, messageInput, replyingTo?.message_id);
       setMessageInput('');
@@ -97,6 +134,40 @@ export default function Messages({ user, onlineUsers }) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleFileUpload = (type) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    
+    switch (type) {
+      case 'image':
+        input.accept = 'image/*';
+        break;
+      case 'video':
+        input.accept = 'video/*';
+        break;
+      case 'audio':
+        input.accept = 'audio/*';
+        break;
+      case 'document':
+        input.accept = '.pdf,.doc,.docx,.txt';
+        break;
+      default:
+        input.accept = '*/*';
+    }
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // Handle file upload logic here
+        console.log('Selected file:', file);
+        // You can integrate with your file upload service here
+      }
+    };
+    
+    input.click();
+    setShowAttachmentMenu(false);
   };
 
   const formatTime = (createdAt) => {
@@ -118,10 +189,17 @@ export default function Messages({ user, onlineUsers }) {
     setShowEmojiPicker(false);
   };
 
+  const attachmentOptions = [
+    { icon: Image, label: 'Photo', type: 'image', color: 'text-green-500' },
+    { icon: Video, label: 'Video', type: 'video', color: 'text-blue-500' },
+    { icon: Mic, label: 'Audio', type: 'audio', color: 'text-purple-500' },
+    { icon: FileText, label: 'Document', type: 'document', color: 'text-orange-500' },
+  ];
+
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col w-full h-screen relative">
-      {/* Header */}
-      <div className="bg-white p-4 border-b border-red-100 flex justify-between items-center relative z-10 shadow-sm">
+    <div className="bg-white flex flex-col w-full h-screen relative overflow-hidden">
+      {/* Header - Fixed */}
+      <div className="bg-white p-4 border-b border-red-100 flex justify-between items-center relative z-30 shadow-sm flex-shrink-0">
         <div className="flex items-center">
           {window.innerWidth <= 1024 && (
             <button 
@@ -166,15 +244,19 @@ export default function Messages({ user, onlineUsers }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2 relative">
+        
+        <div className="flex items-center space-x-2 relative dropdown-container">
           <button 
             className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
-            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMoreMenu(!showMoreMenu);
+            }}
           >
             <MoreVertical size={18} />
           </button>
           {showMoreMenu && (
-            <div className="absolute top-12 right-0 w-40 bg-white border border-red-100 rounded-xl shadow-lg z-30">
+            <div className="absolute top-12 right-0 w-40 bg-white border border-red-100 rounded-xl shadow-xl z-40 overflow-hidden">
               {[
                 { id: 'dm', label: 'Messages' },
                 { id: 'files', label: 'Files' },
@@ -182,13 +264,11 @@ export default function Messages({ user, onlineUsers }) {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  className={`w-full text-left px-4 py-2 text-sm ${
+                  className={`w-full text-left px-4 py-3 text-sm ${
                     activeTab === tab.id
                       ? 'text-red-600 bg-red-50'
                       : 'text-gray-600 hover:bg-red-50 hover:text-red-500'
-                  } transition-all duration-200 ${
-                    tab.id === 'dm' ? 'rounded-t-xl' : tab.id === 'links' ? 'rounded-b-xl' : ''
-                  }`}
+                  } transition-all duration-200 border-b border-red-50 last:border-b-0`}
                   onClick={() => {
                     setActiveTab(tab.id);
                     setShowMoreMenu(false);
@@ -202,8 +282,15 @@ export default function Messages({ user, onlineUsers }) {
         </div>
       </div>
       
-      {/* Messages Area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 bg-white" style={{ paddingBottom: '6rem' }}>
+      {/* Messages Area - Scrollable */}
+      <div 
+        ref={messagesContainerRef} 
+        className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 bg-white"
+        style={{ 
+          height: 'calc(100vh - 140px)', // Account for header and input area
+          overscrollBehavior: 'contain'
+        }}
+      >
         {isLoadingMore && (
           <div className="flex justify-center py-4">
             <div className="flex space-x-1">
@@ -310,8 +397,9 @@ export default function Messages({ user, onlineUsers }) {
         <div ref={messagesEndRef} />
       </div>
       
+      {/* Reply Preview - Fixed above input */}
       {replyingTo && (
-        <div className="bg-red-50 p-3 mx-4 rounded-xl border border-red-100 animate-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-red-50 p-3 mx-4 rounded-xl border border-red-100 animate-in slide-in-from-bottom-2 duration-300 flex-shrink-0 z-20">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-rose-600 rounded-full"></div>
@@ -332,9 +420,51 @@ export default function Messages({ user, onlineUsers }) {
         </div>
       )}
       
-      <div className="p-4 bg-white border-t border-red-100 sticky bottom-0 left-0 right-0 z-20">
-        <div className="flex items-end bg-gray-50 rounded-2xl p-3 shadow-inner border border-red-100 space-x-3">
-          <button className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200 flex-shrink-0">
+      {/* Input Area - Fixed at bottom */}
+      <div className="p-4 bg-white border-t border-red-100 flex-shrink-0 z-30 relative">
+        {/* Emoji Picker - positioned above input */}
+        {showEmojiPicker && (
+          <div className="absolute bottom-full left-4 right-4 mb-2 z-40 flex justify-center">
+            <div className="bg-white rounded-xl shadow-2xl border border-red-100 overflow-hidden max-w-sm w-full">
+              <EmojiPicker 
+                onEmojiClick={onEmojiClick}
+                width="100%"
+                height={300}
+                searchDisabled={window.innerWidth < 640}
+                skinTonesDisabled={window.innerWidth < 640}
+                previewConfig={{ showPreview: false }}
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Attachment Menu - positioned above input */}
+        {showAttachmentMenu && (
+          <div className="absolute bottom-full left-4 mb-2 z-40">
+            <div className="bg-white rounded-xl shadow-xl border border-red-100 p-2 grid grid-cols-2 gap-2 w-48">
+              {attachmentOptions.map((option) => (
+                <button
+                  key={option.type}
+                  className="flex flex-col items-center p-3 rounded-lg hover:bg-red-50 transition-all duration-200 group"
+                  onClick={() => handleFileUpload(option.type)}
+                >
+                  <option.icon size={20} className={`${option.color} group-hover:scale-110 transition-transform duration-200`} />
+                  <span className="text-xs text-gray-600 mt-1 font-medium">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div className="flex items-end bg-gray-50 rounded-2xl p-3 shadow-inner border border-red-100 space-x-3 dropdown-container">
+          <button 
+            className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200 flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAttachmentMenu(!showAttachmentMenu);
+              setShowEmojiPicker(false);
+            }}
+          >
             <Paperclip size={18} />
           </button>
           
@@ -355,17 +485,16 @@ export default function Messages({ user, onlineUsers }) {
                 e.target.style.height = e.target.scrollHeight + 'px';
               }}
             />
-            {showEmojiPicker && (
-              <div className="absolute bottom-16 left-0 z-30">
-                <EmojiPicker onEmojiClick={onEmojiClick} />
-              </div>
-            )}
           </div>
           
           <div className="flex items-center space-x-2 flex-shrink-0">
             <button 
               className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEmojiPicker(!showEmojiPicker);
+                setShowAttachmentMenu(false);
+              }}
             >
               <Smile size={18} />
             </button>
