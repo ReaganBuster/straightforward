@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import * as supabaseQueries from '../services/supabase';
 import * as supabaseAuthQueries from '../services/authenticationService';
 
-// Auth hook - Keep as is
+const CHANNEL_NAME = 'presence:global';
+
+// Auth hook
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export const useAuth = () => {
   return { user, loading, error, signUp, signIn, signOut };
 };
 
-// Profile hook - Keep as is
+// Profile hook
 export const useProfile = (userId) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export const useProfile = (userId) => {
   return { profile, loading, error, updateProfile };
 };
 
-// Updated Feed Posts hook
+//Feed Posts hook
 export const useFeedPosts = (userId, initialFeedType = 'discover') => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ export const useFeedPosts = (userId, initialFeedType = 'discover') => {
   };
 };
 
-// Updated User Posts hook
+// User Posts hook
 export const useUserPosts = (userId, initialContentType = 'all') => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -343,6 +345,101 @@ export const useUserPosts = (userId, initialContentType = 'all') => {
     totalCount
   };
 };
+
+// Online users hook
+export const useOnlineUsers = () => {
+  const [onlineUsers, setOnlineUsers] = useState(new Map());
+
+  useEffect(() => {
+    let channel = null;
+    let isSubscribed = false;
+
+    const setupPresence = async () => {
+      try {
+        const { data, error } = await supabaseQueries.supabase.auth.getUser();
+        const user = data?.user;
+        
+        if (error || !user) return;
+
+        channel = supabaseQueries.supabase.channel('presence:global');
+
+        const handlePresenceState = () => {
+          if (!channel || !isSubscribed) return;
+          
+          const state = channel.presenceState();
+          const online = new Map();
+          
+          Object.entries(state).forEach(([presenceKey, presences]) => {
+            if (presences && Array.isArray(presences) && presences.length > 0) {
+              const presenceData = presences[0];
+              
+              if (presenceData.user_id) {
+                online.set(presenceData.user_id, {
+                  user_id: presenceData.user_id,
+                  name: presenceData.name,
+                  avatar_url: presenceData.avatar_url,
+                  online_at: presenceData.online_at,
+                  presence_key: presenceKey
+                });
+              }
+            }
+          });
+          
+          setOnlineUsers(online);
+        };
+
+        channel
+          .on('presence', { event: 'sync' }, () => {
+            handlePresenceState();
+          })
+          .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            handlePresenceState();
+          })
+          .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+            handlePresenceState();
+          });
+
+        const subscribeResult = await channel.subscribe(async (status, err) => {
+          if (status === 'SUBSCRIBED') {
+            isSubscribed = true;
+            
+            try {
+              await channel.track({
+                user_id: user.id,
+                name: user.user_metadata?.name || user.email || 'Anonymous',
+                avatar_url: user.user_metadata?.avatar_url || null,
+                online_at: new Date().toISOString(),
+              });
+              
+              setTimeout(() => {
+                handlePresenceState();
+              }, 200);
+              
+            } catch (trackError) {
+              console.error('Error tracking presence:', trackError);
+            }
+          }
+        });
+
+      } catch (error) {
+        console.error('Setup presence error:', error);
+      }
+    };
+
+    setupPresence();
+
+    return () => {
+      isSubscribed = false;
+      if (channel) {
+        channel.untrack();
+        channel.unsubscribe();
+      }
+    };
+  }, []);
+
+  return onlineUsers;
+};
+
 
 // Conversations hooks
 export const useConversations = (userId) => {

@@ -9,6 +9,7 @@ import Settings from './pages/Settings';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import { useAuthListener } from './hooks/useAuthListener';
+import {useOnlineUsers} from './hooks/hooks';
 import TransactionsPage from './pages/Transactions';
 import DirectMessages from './components/dm/directMessaging';
 import Messages from './pages/messages';
@@ -20,6 +21,8 @@ import AuthenticatedLayout from './pages/authenticatedLayout';
 const App = () => {
   useAuthListener();
   const { user, loading } = useRecoilValue(userAtom);
+  const onlineUsers = useOnlineUsers();
+  console.log('Online Users:', onlineUsers);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -33,7 +36,7 @@ const App = () => {
         <Route path="/settings" element={user ? <Settings user={user} /> : <Navigate to='/'/>} />
         <Route path="/m/:id" element={user ? <Messages user={user} />: <Navigate to="/"/>} />
         <Route element={user ? <AuthenticatedLayout user={user} /> : <Navigate to="/" />}>
-            <Route path="/feed" element={<Feed user={user} />} />
+            <Route path="/feed" element={<Feed user={user} onlineUsers={onlineUsers}/>} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/notifications" element={<Notifications user={user} />} />
             <Route path="/analytics" element={<Analytics user={user} />} />

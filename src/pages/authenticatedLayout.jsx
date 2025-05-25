@@ -11,6 +11,8 @@ const AuthenticatedLayout = ({ user }) => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
 
+  
+
   const toggleSidebar = () => {
     setIsMobileSidebarOpen(!isMobileSidebarOpen);
   };
