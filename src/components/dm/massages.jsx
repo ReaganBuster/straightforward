@@ -8,7 +8,7 @@ const Messages = () => {
   const [activeTab, setActiveTab] = useState('all');
   
   const { user } = useAuth();
-  const { conversations, loading, refreshConversations } = useConversations(user?.id);
+  const { conversations, loading, } = useConversations(user?.id);
 
   const handleChatSelect = (chat) => {
     setSelectedChat(chat);
@@ -26,12 +26,7 @@ const Messages = () => {
         loading={loading}
         handleChatSelect={handleChatSelect}
       />
-      <MessageDetails
-        user={user}
-        selectedChat={selectedChat}
-        setSelectedChat={setSelectedChat}
-        refreshConversations={refreshConversations}
-      />
+     
     </div>
   );
 };
