@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as supabaseQueries from '../services/supabase';
 import * as supabaseAuthQueries from '../services/authenticationService';
 
@@ -349,93 +349,102 @@ export const useUserPosts = (userId, initialContentType = 'all') => {
 // Online users hook
 export const useOnlineUsers = () => {
   const [onlineUsers, setOnlineUsers] = useState(new Map());
+  const channelRef = useRef(null);
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
-    let channel = null;
     let isSubscribed = false;
 
     const setupPresence = async () => {
       try {
         const { data, error } = await supabaseQueries.supabase.auth.getUser();
         const user = data?.user;
-        
         if (error || !user) return;
 
-        channel = supabaseQueries.supabase.channel('presence:global');
+        const channel = supabaseQueries.supabase.channel('presence:global');
+        channelRef.current = channel;
 
-        const handlePresenceState = () => {
-          if (!channel || !isSubscribed) return;
-          
-          const state = channel.presenceState();
-          const online = new Map();
-          
+        const updateOnlineUsers = (state) => {
+          const newMap = new Map();
+
           Object.entries(state).forEach(([presenceKey, presences]) => {
-            if (presences && Array.isArray(presences) && presences.length > 0) {
-              const presenceData = presences[0];
-              
-              if (presenceData.user_id) {
-                online.set(presenceData.user_id, {
-                  user_id: presenceData.user_id,
-                  name: presenceData.name,
-                  avatar_url: presenceData.avatar_url,
-                  online_at: presenceData.online_at,
-                  presence_key: presenceKey
-                });
-              }
+            const firstPresence = presences?.[0];
+            if (firstPresence?.user_id) {
+              newMap.set(firstPresence.user_id, {
+                user_id: firstPresence.user_id,
+                name: firstPresence.name,
+                avatar_url: firstPresence.avatar_url,
+                online_at: firstPresence.online_at,
+                presence_key: presenceKey,
+              });
             }
           });
-          
-          setOnlineUsers(online);
+
+          // Avoid unnecessary re-renders
+          const isDifferent = newMap.size !== onlineUsers.size || [...newMap.keys()].some(k => !onlineUsers.has(k));
+          if (isDifferent) setOnlineUsers(newMap);
         };
 
         channel
           .on('presence', { event: 'sync' }, () => {
-            handlePresenceState();
+            if (isSubscribed && isMountedRef.current) {
+              updateOnlineUsers(channel.presenceState());
+            }
           })
-          .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-            handlePresenceState();
+          .on('presence', { event: 'join' }, ({ newPresences }) => {
+            if (isSubscribed && isMountedRef.current) {
+              const state = channel.presenceState();
+              newPresences.forEach(p => state[p.user_id] = [p]);
+              updateOnlineUsers(state);
+            }
           })
-          .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-            handlePresenceState();
+          .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+            if (isSubscribed && isMountedRef.current) {
+              const state = channel.presenceState();
+              leftPresences.forEach(p => delete state[p.user_id]);
+              updateOnlineUsers(state);
+            }
           });
 
-        const subscribeResult = await channel.subscribe(async (status, err) => {
+        const subscribeResult = await channel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             isSubscribed = true;
-            
-            try {
-              await channel.track({
-                user_id: user.id,
-                name: user.user_metadata?.name || user.email || 'Anonymous',
-                avatar_url: user.user_metadata?.avatar_url || null,
-                online_at: new Date().toISOString(),
-              });
-              
-              setTimeout(() => {
-                handlePresenceState();
-              }, 200);
-              
-            } catch (trackError) {
-              console.error('Error tracking presence:', trackError);
+
+            await channel.track({
+              user_id: user.id,
+              name: user.user_metadata?.name || user.email || 'Anonymous',
+              avatar_url: user.user_metadata?.avatar_url || null,
+              online_at: new Date().toISOString(),
+            });
+
+            if (isMountedRef.current) {
+              updateOnlineUsers(channel.presenceState());
             }
           }
         });
 
-      } catch (error) {
-        console.error('Setup presence error:', error);
+      } catch (err) {
+        console.error('Error setting up presence:', err);
       }
     };
 
+    isMountedRef.current = true;
     setupPresence();
 
     return () => {
+      isMountedRef.current = false;
       isSubscribed = false;
-      if (channel) {
-        channel.untrack();
-        channel.unsubscribe();
+
+      try {
+        if (channelRef.current) {
+          channelRef.current.untrack();
+          channelRef.current.unsubscribe();
+        }
+      } catch (cleanupErr) {
+        console.warn('Error during presence cleanup:', cleanupErr);
       }
     };
-  }, []);
+  }, );
 
   return onlineUsers;
 };
