@@ -1,159 +1,213 @@
-import { useRef, useEffect } from 'react';
-import { Search, Mail } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  MessageCircle,
+  Check,
+  CheckCheck,
+  Pin,
+  MoreVertical,
+  VolumeX,
+} from 'lucide-react';
 
-const ChatsSection = ({
-  user,
-  selectedChat,
-  setSelectedChat,
-  activeTab,
-  setActiveTab,
-  conversations,
-  loading,
-  handleChatSelect
-}) => {
+const Chats = ({ user, conversations, loading }) => {
   const chatListRef = useRef(null);
+  const [hoveredChat, setHoveredChat] = useState(null);
+  const navigate = useNavigate();
 
-  // Enable independent scrolling
   useEffect(() => {
-    const handleScroll = (e) => {
-      e.stopPropagation();
-    };
-
+    const handleScroll = (e) => e.stopPropagation();
     const chatList = chatListRef.current;
-    if (chatList) {
-      chatList.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      if (chatList) {
-        chatList.removeEventListener('scroll', handleScroll);
-      }
-    };
+    chatList?.addEventListener('scroll', handleScroll);
+    return () => chatList?.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const filterConversations = () => {
-    if (activeTab === 'all') {
-      return conversations;
-    } else if (activeTab === 'unread') {
-      return conversations.filter(chat => chat.unread_count > 0);
-    }
-    return conversations;
+  const getAvatarFallback = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const truncateMessage = (message, maxLength = 35) => {
+    if (!message) return 'No messages yet';
+    return message.length > maxLength ? message.substring(0, maxLength) + '...' : message;
   };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getUnreadCount = () => {
-    return conversations.reduce((total, chat) => total + (chat.unread_count || 0), 0);
+  const getMessageStatus = () => {
+    const statuses = ['sent', 'delivered', 'read'];
+    return statuses[Math.floor(Math.random() * statuses.length)];
   };
 
-  const filteredConversations = filterConversations();
+  const renderMessageStatus = (status) => {
+    switch (status) {
+      case 'sent':
+        return <Check size={16} className="text-gray-400" />;
+      case 'delivered':
+        return <CheckCheck size={16} className="text-gray-400" />;
+      case 'read':
+        return <CheckCheck size={16} className="text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const handlePostClick = (chat) => {
+    const recipient = chat.other_user;
+    navigate(`/m/${recipient.id}`, {
+      state: {
+        recipientId: recipient.id,
+        recipientName: recipient.name || recipient.username,
+        recipientAvatar: recipient.avatar_url,
+        content: null,
+        rate: chat.dm_fee || 0,
+      },
+    });
+  };
 
   return (
-    <div 
+    <div
       ref={chatListRef}
-      className={`flex-none w-full lg:w-80 border-r border-gray-200 bg-white overflow-y-auto h-screen ${selectedChat ? 'hidden lg:block' : ''}`}
+      className="flex-none w-full lg:w-80 border-r border-gray-100 bg-white overflow-y-auto h-screen"
     >
-      {/* Chat List Header - Sticky */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between p-3">
-          <h2 className="font-bold text-lg">Messages</h2>
-          <div className="flex">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search messages"
-                className="pl-7 py-1 pr-2 bg-gray-100 text-sm rounded-full w-36 focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
+              <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-red-100">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Your avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-red-50 flex items-center justify-center text-red-500 font-bold text-sm">
+                    {getAvatarFallback(user?.name || user?.username)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <h1 className="text-red-600 font-semibold text-lg">Chats</h1>
+              <p className="text-red-500 text-xs">
+                {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
-        </div>
-        
-        <div className="flex space-x-1 px-2 pb-2">
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded-full flex-1 ${activeTab === 'all' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            onClick={() => setActiveTab('all')}
-          >
-            All
-          </button>
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded-full flex-1 ${activeTab === 'unread' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            onClick={() => setActiveTab('unread')}
-          >
-            Unread {getUnreadCount() > 0 && `(${getUnreadCount()})`}
+          <button className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all">
+            <MoreVertical size={20} />
           </button>
         </div>
       </div>
-      
+
       {/* Chat List */}
-      {loading ? (
-        <div className="flex justify-center items-center p-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-red-600"></div>
-        </div>
-      ) : filteredConversations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
-          <Mail className="w-8 h-8 mb-2 text-gray-400" />
-          <p className="text-sm">No conversations found</p>
-          <p className="text-xs text-center mt-1">Connect with experts to start a chat</p>
-        </div>
-      ) : (
-        filteredConversations.map((chat) => (
-          <div 
-            key={chat.id}
-            className={`p-3 border-b border-gray-100 cursor-pointer ${selectedChat?.id === chat.id ? 'bg-red-50' : 'hover:bg-gray-50'}`}
-            onClick={() => handleChatSelect(chat)}
-          >
-            <div className="flex items-start">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-                  <img 
-                    src={ "/api/placeholder/40/40"} 
-                    alt={'User Avatar'} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {/* {chat.recipient.online && (
-                  <div className="w-3 h-3 bg-green-500 rounded-full absolute right-0 bottom-0 border border-white"></div>
-                )} */}
-              </div>
-              
-              <div className="ml-3 flex-1">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center">
-                    <h4 className={`font-medium text-sm ${chat.unread_count > 0 ? 'text-gray-900' : 'text-gray-700'}`}>
-                      {'user'}
-                    </h4>
-                    {chat.recipient.verified && (
-                      <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center ml-1">
-                        <svg className="w-2 h-2 text-white fill-current" viewBox="0 0 24 24">
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500">{formatTime(chat.last_message_time)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center mt-1">
-                  <p className={`text-xs ${chat.unread_count > 0 ? 'font-semibold text-gray-900' : 'text-gray-500'} truncate max-w-36`}>
-                    {chat.last_message}
-                  </p>
-                  {chat.unread_count > 0 && (
-                    <span className="bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {chat.unread_count}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+      <div className="bg-white">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-8 space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-red-500 border-t-transparent"></div>
+            <p className="text-gray-500 text-sm">Loading chats...</p>
           </div>
-        ))
-      )}
+        ) : conversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-96 text-gray-500 p-6">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <MessageCircle className="w-10 h-10 text-red-400" />
+            </div>
+            <h3 className="font-semibold text-gray-700 mb-2">No chats yet</h3>
+            <p className="text-sm text-center text-gray-500 max-w-xs">
+              Start a conversation with experts to see your chats here
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {conversations.map((chat) => {
+              const otherUser = chat.other_user;
+              const hasUnread = Math.random() > 0.7;
+              const unreadCount = hasUnread ? Math.floor(Math.random() * 5) + 1 : 0;
+              const isPinned = Math.random() > 0.8;
+              const isMuted = Math.random() > 0.9;
+              const messageStatus = getMessageStatus();
+
+              return (
+                <div
+                  key={chat.conversation_id}
+                  className={`relative cursor-pointer hover:bg-gray-50 px-4 py-3 ${
+                    isPinned ? 'bg-gray-25' : ''
+                  }`}
+                  onClick={() => handlePostClick(chat)}
+                  onMouseEnter={() => setHoveredChat(chat.conversation_id)}
+                  onMouseLeave={() => setHoveredChat(null)}
+                >
+                  {isPinned && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <Pin size={12} className="text-gray-400 fill-current" />
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-3">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm">
+                        {otherUser?.avatar_url ? (
+                          <img
+                            src={otherUser.avatar_url}
+                            alt={`${otherUser.name || otherUser.username}'s avatar`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold text-sm">
+                            {getAvatarFallback(otherUser?.name || otherUser?.username)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2 truncate">
+                          <h3 className="font-semibold text-gray-900 truncate">
+                            {otherUser?.name || otherUser?.username || 'Unknown User'}
+                          </h3>
+                          {otherUser?.verified && (
+                            <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                              <Check size={10} className="text-white" />
+                            </div>
+                          )}
+                          {isMuted && <VolumeX size={14} className="text-gray-400" />}
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <span className={`text-xs ${hasUnread ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                            {formatTime(chat.updated_at)}
+                          </span>
+                          {renderMessageStatus(messageStatus)}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className={`text-sm truncate pr-2 ${hasUnread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                          {truncateMessage(chat.last_message || 'Start a conversation...')}
+                        </p>
+                        {hasUnread && unreadCount > 0 && (
+                          <div className="bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 font-medium">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* New Chat FAB */}
+      <div className="absolute bottom-6 right-6">
+        <button className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center">
+          <MessageCircle size={24} />
+        </button>
+      </div>
     </div>
   );
 };
 
-export default ChatsSection;
+export default Chats;

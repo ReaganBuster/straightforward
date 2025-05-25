@@ -39,7 +39,7 @@ export default function Messages({ user, onlineUsers }) {
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const fileInputRef = useRef(null);
+  // const fileInputRef = useRef(null);
   const previousScrollHeight = useRef(0);
 
   useEffect(() => {
