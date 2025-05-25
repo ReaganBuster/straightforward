@@ -8,16 +8,16 @@ import MobileNavBar from '../../components/layout/Navbar';
 const SocialFeed = ({ user }) => {
   const [activeTab, setActiveTab] = useState('discover');
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
+  const [isMobile] = useState(window.innerWidth <= 1024);
   const mainContentRef = useRef(null);
   const rightSidebarRef = useRef(null);
-  const lastScrollY = useRef(0);
-  const [isMobile] = useState(window.innerWidth <= 1024);
+  const lastScrollTop = useRef(0);
 
-  const { 
-    posts, 
+  const {
+    posts,
     loading,
     hasMore,
-    loadMore, 
+    loadMore,
     changeFeedType,
     toggleLike,
     toggleBookmark,
@@ -27,7 +27,6 @@ const SocialFeed = ({ user }) => {
   } = useFeedPosts(user?.id, activeTab);
 
   const handleTabChange = (tab) => setActiveTab(tab);
-
   const handlePostCreated = (newPost) => addPost(newPost);
 
   const getTabDescription = () => {
@@ -42,76 +41,90 @@ const SocialFeed = ({ user }) => {
     }
   };
 
-const scrollThreshold = 10;
+  const handleScroll = useCallback(() => {
+    const scrollEl = mainContentRef.current;
+    if (!scrollEl) return;
 
-const handleScroll = useCallback(() => {
-  const scrollEl = mainContentRef.current;
-  if (!scrollEl) return;
+    const currentScrollTop = scrollEl.scrollTop;
+    const delta = currentScrollTop - lastScrollTop.current;
 
-  const currentScrollY = scrollEl.scrollTop;
-  const scrollDelta = currentScrollY - lastScrollY.current;
+    if (Math.abs(delta) < 5) return;
 
-  // Only trigger if the user scrolls more than threshold
-  if (Math.abs(scrollDelta) > scrollThreshold) {
-    const scrollingDown = scrollDelta > 0;
-    setIsMobileNavVisible(!scrollingDown);
-    lastScrollY.current = currentScrollY;
-  }
-}, []);
+    if (delta > 0 && isMobileNavVisible) {
+      setIsMobileNavVisible(false);
+    } else if (delta < 0 && !isMobileNavVisible) {
+      setIsMobileNavVisible(true);
+    }
+
+    lastScrollTop.current = currentScrollTop;
+  }, [isMobileNavVisible]);
 
   useEffect(() => {
     changeFeedType(activeTab);
   }, [activeTab, changeFeedType]);
 
   useEffect(() => {
-    const mainContent = mainContentRef.current;
-    if (mainContent) {
-      mainContent.addEventListener('scroll', handleScroll);
-    }
-    return () => mainContent?.removeEventListener('scroll', handleScroll);
+    const scrollEl = mainContentRef.current;
+    if (!scrollEl) return;
+
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
   useEffect(() => {
-    const handleScroll = (e) => e.stopPropagation();
+    const handleStopPropagation = (e) => e.stopPropagation();
+
     const mainContent = mainContentRef.current;
     const rightSidebar = rightSidebarRef.current;
-    mainContent?.addEventListener('scroll', handleScroll);
-    rightSidebar?.addEventListener('scroll', handleScroll);
+
+    mainContent?.addEventListener('scroll', handleStopPropagation);
+    rightSidebar?.addEventListener('scroll', handleStopPropagation);
+
     return () => {
-      mainContent?.removeEventListener('scroll', handleScroll);
-      rightSidebar?.removeEventListener('scroll', handleScroll);
+      mainContent?.removeEventListener('scroll', handleStopPropagation);
+      rightSidebar?.removeEventListener('scroll', handleStopPropagation);
     };
   }, []);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <div 
+      {/* Main Feed */}
+      <div
         ref={mainContentRef}
         className="w-full md:w-[calc(100%-20rem)] border-l border-r border-gray-200 bg-white overflow-y-auto min-h-screen pb-[60px] md:pb-0 shadow-sm"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 60px)' }}
       >
+        {/* Mobile NavBar with scroll-based visibility */}
         {isMobile && (
           <div className={`sticky top-0 z-20 transition-transform duration-300 ease-in-out ${isMobileNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
             <MobileNavBar user={user} />
           </div>
         )}
+
+        {/* Tab Filter */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
           <div className="flex items-center justify-between px-3 py-2">
             <div className="flex space-x-1">
-              <button 
-                className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'discover' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
+              <button
+                className={`px-4 py-2 font-medium text-sm rounded-full ${
+                  activeTab === 'discover' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'
+                }`}
                 onClick={() => handleTabChange('discover')}
               >
                 Discover
               </button>
-              <button 
-                className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'bookmarks' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
+              <button
+                className={`px-4 py-2 font-medium text-sm rounded-full ${
+                  activeTab === 'bookmarks' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'
+                }`}
                 onClick={() => handleTabChange('bookmarks')}
               >
                 Bookmarks
               </button>
-              <button 
-                className={`px-4 py-2 font-medium text-sm rounded-full ${activeTab === 'liked' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
+              <button
+                className={`px-4 py-2 font-medium text-sm rounded-full ${
+                  activeTab === 'liked' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'
+                }`}
                 onClick={() => handleTabChange('liked')}
               >
                 Likes
@@ -119,35 +132,45 @@ const handleScroll = useCallback(() => {
             </div>
           </div>
         </div>
+
+        {/* Create Post - Desktop Only */}
         <div className="hidden md:block">
           <CreatePost user={user} onPostCreated={handlePostCreated} />
         </div>
+
+        {/* Loading Indicator */}
         {loading && (
           <div className="flex justify-center items-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 md:h-6 md:w-6 border-t-2 border-b-2 border-red-600"></div>
+            <div className="animate-spin rounded-full h-6 w-6 md:h-5 md:w-5 border-t-2 border-b-2 border-red-600"></div>
           </div>
         )}
+
+        {/* Empty State */}
         {!loading && posts.length === 0 && (
           <div className="text-center p-4 text-gray-500 text-sm">
             {getTabDescription()}
           </div>
         )}
+
+        {/* Feed */}
         <div>
           {posts.map((post) => (
-            <RenderPost 
-              key={post.post_id} 
-              post={post} 
-              user={user} 
+            <RenderPost
+              key={post.post_id}
+              post={post}
+              user={user}
               toggleLike={toggleLike}
               toggleBookmark={toggleBookmark}
-              addView={addView} 
-              unlockContent={unlockContent} 
+              addView={addView}
+              unlockContent={unlockContent}
             />
           ))}
         </div>
+
+        {/* Load More */}
         {!loading && posts.length > 0 && hasMore && (
           <div className="p-3 flex justify-center">
-            <button 
+            <button
               className="text-red-600 bg-red-50 px-3 py-1.5 rounded-lg font-medium hover:bg-red-100 transition text-sm"
               onClick={loadMore}
             >
@@ -156,6 +179,8 @@ const handleScroll = useCallback(() => {
           </div>
         )}
       </div>
+
+      {/* Right Sidebar */}
       <RightSidebar rightSidebarRef={rightSidebarRef} user={user} />
     </div>
   );
