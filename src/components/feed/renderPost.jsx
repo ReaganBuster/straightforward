@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, Bookmark, Share2, MoreHorizontal, Mail, Star, Activity, Zap
@@ -16,6 +16,10 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
 
   const { userRatings, rateItem, isLoading: isRatingLoading } = usePostRatings(user?.id);
   const onlineUsers = useOnlineUsers();
+
+  const isAuthorOnline = useMemo(() => {
+    return onlineUsers.has(post.author?.user_id);
+  }, [onlineUsers, post.author?.user_id]);
 
   useEffect(() => {
     setIsLiked(post.is_liked || false);
@@ -87,7 +91,6 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   };
 
   const authorInfo = post.author || {};
-  const isAuthorOnline = authorInfo.user_id && onlineUsers.has(authorInfo.user_id);
 
   const formatCurrency = (amount, currency = 'UGX') => `${amount.toLocaleString()} ${currency}`;
 
