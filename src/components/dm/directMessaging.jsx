@@ -6,17 +6,19 @@ import {
   Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Paperclip,
   MoreVertical, Smile
 } from 'lucide-react';
-
+import EmojiPicker from 'emoji-picker-react'; // Ensure this package is installed
 import { useConversationMessages } from '../../hooks/hooks';
 import RenderContentCard from './messageRender';
 
-export default function Messages({ user }) {
+export default function Messages({ user, onlineStatus }) {
   const [activeTab, setActiveTab] = useState('dm');
   const [replyingTo, setReplyingTo] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [hoveredMessage, setHoveredMessage] = useState(null);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { recipientId, recipientName, recipientAvatar, content } = location.state || {};
@@ -34,7 +36,6 @@ export default function Messages({ user }) {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Initialize conversation automatically
   useEffect(() => {
     if (!recipientId || !user.id) {
       navigate('/feed', { replace: true });
@@ -46,14 +47,12 @@ export default function Messages({ user }) {
     ensureConversation();
   }, [recipientId, user.id, initializeConversation, navigate]);
 
-  // Scroll to the bottom when new messages are added
   useEffect(() => {
     if (!isLoadingMore && messagesContainerRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoadingMore]);
 
-  // Infinite scroll handler
   useEffect(() => {
     const handleScroll = () => {
       if (messagesContainerRef.current.scrollTop < 50 && hasMore && !loading) {
@@ -66,7 +65,6 @@ export default function Messages({ user }) {
     return () => container?.removeEventListener('scroll', handleScroll);
   }, [hasMore, loading, loadMoreMessages]);
 
-  // Send initial message from recipient if content is provided
   useEffect(() => {
     if (!content || messages.length > 0 || loading) return;
     const sendInitialMessage = async () => {
@@ -79,7 +77,6 @@ export default function Messages({ user }) {
     sendInitialMessage();
   }, [content, messages.length, loading, sendMessage, recipientId]);
 
-  // Handle sending a message
   const handleSendMessage = async () => {
     if (!messageInput.trim()) return;
     setIsTyping(true);
@@ -94,7 +91,6 @@ export default function Messages({ user }) {
     }
   };
 
-  // Handle key press for sending message
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -102,7 +98,6 @@ export default function Messages({ user }) {
     }
   };
 
-  // Format time with EAT timezone
   const formatTime = (createdAt) => {
     return new Date(createdAt).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -111,24 +106,21 @@ export default function Messages({ user }) {
     });
   };
 
-  // Back button navigation
   const handleBack = () => {
     if (window.innerWidth <= 1024) navigate('/feed');
   };
 
-  // Avatar fallback
   const getAvatarFallback = (name) => name ? name.charAt(0).toUpperCase() : '?';
 
-  return (
-    <div className="bg-gradient-to-br from-red-50 to-rose-100 rounded-2xl overflow-hidden shadow-2xl flex flex-col w-full h-screen relative">
-      {/* Animated background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-red-500 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-40 h-40 bg-rose-500 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+  const onEmojiClick = (emojiObject) => {
+    setMessageInput((prev) => prev + emojiObject.emoji);
+    setShowEmojiPicker(false);
+  };
 
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col w-full h-screen relative">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-xl p-4 border-b border-red-100 flex justify-between items-center relative z-10 shadow-sm">
+      <div className="bg-white p-4 border-b border-red-100 flex justify-between items-center relative z-10 shadow-sm">
         <div className="flex items-center">
           {window.innerWidth <= 1024 && (
             <button 
@@ -146,9 +138,8 @@ export default function Messages({ user }) {
                   alt={`${recipientName}'s avatar`}
                   className="h-12 w-12 rounded-full object-cover ring-2 ring-red-200 shadow-lg transition-transform duration-200 hover:scale-110"
                   onError={(e) => {
-                    e.target.src = '';
-                    e.target.style.backgroundColor = '#ef4444';
-                    e.target.innerText = getAvatarFallback(recipientName);
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
                   }}
                 />
               ) : (
@@ -156,47 +147,62 @@ export default function Messages({ user }) {
                   {getAvatarFallback(recipientName)}
                 </div>
               )}
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+              <div 
+                className="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-red-200 absolute top-0 left-0 hidden"
+                style={{ display: 'none' }}
+              >
+                {getAvatarFallback(recipientName)}
+              </div>
+              {onlineStatus && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+              )}
             </div>
             <div className="ml-3">
               <h3 className="font-semibold text-gray-800 text-lg">{recipientName}</h3>
-              <p className="text-xs text-green-500 font-medium">Online</p>
+              {onlineStatus && (
+                <p className="text-xs text-green-500 font-medium">Online</p>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200">
+        <div className="flex items-center space-x-2 relative">
+          <button 
+            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+          >
             <MoreVertical size={18} />
           </button>
+          {showMoreMenu && (
+            <div className="absolute top-12 right-0 w-40 bg-white border border-red-100 rounded-xl shadow-lg z-30">
+              {[
+                { id: 'dm', label: 'Messages' },
+                { id: 'files', label: 'Files' },
+                { id: 'links', label: 'Links' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`w-full text-left px-4 py-2 text-sm ${
+                    activeTab === tab.id
+                      ? 'text-red-600 bg-red-50'
+                      : 'text-gray-600 hover:bg-red-50 hover:text-red-500'
+                  } transition-all duration-200 ${
+                    tab.id === 'dm' ? 'rounded-t-xl' : tab.id === 'links' ? 'rounded-b-xl' : ''
+                  }`}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Tabs */}
-      <div className="bg-white/60 backdrop-blur-md px-4 py-3 border-b border-red-100 flex space-x-1 relative z-10">
-        {[
-          { id: 'dm', label: 'Messages' },
-          { id: 'files', label: 'Files' },
-          { id: 'links', label: 'Links' }
-        ].map((tab) => (
-          <button 
-            key={tab.id}
-            className={`relative text-sm font-medium pb-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-              activeTab === tab.id 
-                ? 'text-red-600 bg-red-50 shadow-sm' 
-                : 'text-gray-500 hover:text-red-400 hover:bg-red-25'
-            }`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-red-500 rounded-full"></div>
-            )}
-          </button>
-        ))}
-      </div>
-      
       {/* Messages Area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10" style={{ paddingBottom: '6rem' }}>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 bg-white" style={{ paddingBottom: '6rem' }}>
         {isLoadingMore && (
           <div className="flex justify-center py-4">
             <div className="flex space-x-1">
@@ -244,46 +250,18 @@ export default function Messages({ user }) {
               </div>
             ) : (
               <div className={`flex items-end space-x-2 ${message.is_current_user ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                {!message.is_current_user && (
-                  <div className="relative flex-shrink-0">
-                    {recipientAvatar ? (
-                      <img
-                        src={recipientAvatar}
-                        alt={`${recipientName}'s avatar`}
-                        className="h-8 w-8 rounded-full object-cover ring-2 ring-red-100"
-                        onError={(e) => {
-                          e.target.src = '';
-                          e.target.style.backgroundColor = '#ef4444';
-                          e.target.innerText = getAvatarFallback(recipientName);
-                        }}
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold text-sm ring-2 ring-red-100">
-                        {getAvatarFallback(recipientName)}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
                 <div className={`max-w-xs md:max-w-md relative ${message.is_current_user ? 'ml-auto' : ''}`}>
-                  <div className={`relative px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${
-                    message.is_current_user 
-                      ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-br-md' 
-                      : 'bg-white text-gray-800 rounded-bl-md border border-red-50'
-                  } ${hoveredMessage === message.message_id ? 'shadow-lg scale-105' : ''}`}>
-                    {RenderContentCard ? RenderContentCard(message, recipientName) : (
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                    )}
-                    
-                    {/* Reply indicator */}
-                    {message.reply_to && (
-                      <div className={`text-xs opacity-75 mb-2 p-2 rounded-lg ${
-                        message.is_current_user ? 'bg-white/20' : 'bg-gray-100'
-                      }`}>
-                        <span className="font-medium">Replying to message</span>
-                      </div>
-                    )}
-                  </div>
+                  {RenderContentCard ? RenderContentCard(message, recipientName) : (
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  )}
+                  
+                  {message.reply_to && (
+                    <div className={`text-xs opacity-75 mb-2 p-2 rounded-lg ${
+                      message.is_current_user ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <span className="font-medium">Replying to message</span>
+                    </div>
+                  )}
                   
                   <div className={`flex items-center mt-1 space-x-2 ${message.is_current_user ? 'justify-end' : ''}`}>
                     <span className={`text-xs ${message.is_current_user ? 'text-red-200' : 'text-gray-400'}`}>
@@ -298,11 +276,6 @@ export default function Messages({ user }) {
                   </div>
                 </div>
                 
-                {message.is_current_user && (
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex-shrink-0 ring-2 ring-gray-200"></div>
-                )}
-                
-                {/* Reply button */}
                 <div className={`absolute ${message.is_current_user ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 ${
                   hoveredMessage === message.message_id ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
                 } transition-all duration-200`}>
@@ -336,9 +309,8 @@ export default function Messages({ user }) {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Reply indicator */}
       {replyingTo && (
-        <div className="bg-gradient-to-r from-red-50 to-rose-50 p-3 mx-4 rounded-xl border border-red-100 animate-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-red-50 p-3 mx-4 rounded-xl border border-red-100 animate-in slide-in-from-bottom-2 duration-300">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-rose-600 rounded-full"></div>
@@ -359,14 +331,13 @@ export default function Messages({ user }) {
         </div>
       )}
       
-      {/* Input Area */}
-      <div className="p-4 bg-white/80 backdrop-blur-xl border-t border-red-100 sticky bottom-0 left-0 right-0 z-20">
+      <div className="p-4 bg-white border-t border-red-100 sticky bottom-0 left-0 right-0 z-20">
         <div className="flex items-end bg-gray-50 rounded-2xl p-3 shadow-inner border border-red-100 space-x-3">
           <button className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200 flex-shrink-0">
             <Paperclip size={18} />
           </button>
           
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             <textarea
               placeholder="Type your message..." 
               className="w-full bg-transparent outline-none text-sm py-2 px-2 resize-none min-h-[2.5rem] max-h-32 leading-relaxed"
@@ -383,10 +354,18 @@ export default function Messages({ user }) {
                 e.target.style.height = e.target.scrollHeight + 'px';
               }}
             />
+            {showEmojiPicker && (
+              <div className="absolute bottom-16 left-0 z-30">
+                <EmojiPicker onEmojiClick={onEmojiClick} />
+              </div>
+            )}
           </div>
           
           <div className="flex items-center space-x-2 flex-shrink-0">
-            <button className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200">
+            <button 
+              className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all duration-200"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
               <Smile size={18} />
             </button>
             <button 
