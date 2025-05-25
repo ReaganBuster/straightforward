@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as supabaseQueries from '../services/supabase';
 import * as supabaseAuthQueries from '../services/authenticationService';
-import { debounce } from 'lodash';
 
-const CHANNEL_NAME = 'presence:global';
 
 // Auth hook
 export const useAuth = () => {
@@ -350,145 +348,120 @@ export const useUserPosts = (userId, initialContentType = 'all') => {
 // Online users hook
 export const useOnlineUsers = () => {
   const [onlineUsers, setOnlineUsers] = useState(new Map());
-  const channelRef = useRef(null);
-  const isSubscribed = useRef(false);
-  const leaveTimeouts = useRef(new Map()); // Only delay leave events
-  const lastUpdateRef = useRef(0);
-
-  const processPresenceState = useCallback((state) => {
-    const newMap = new Map();
-
-    Object.entries(state).forEach(([presenceKey, presences]) => {
-      const firstPresence = presences?.[0];
-      if (firstPresence?.user_id) {
-        newMap.set(firstPresence.user_id, {
-          user_id: firstPresence.user_id,
-          name: firstPresence.name,
-          avatar_url: firstPresence.avatar_url,
-          online_at: firstPresence.online_at,
-          presence_key: presenceKey,
-        });
-      }
-    });
-
-    // Only update if there's actually a change
-    setOnlineUsers((prev) => {
-      if (newMap.size !== prev.size) return newMap;
-      
-      for (const [key, value] of newMap) {
-        if (!prev.has(key)) return newMap;
-      }
-      
-      for (const key of prev.keys()) {
-        if (!newMap.has(key)) return newMap;
-      }
-      
-      return prev; // No changes detected
-    });
-  }, []);
-
-  // Immediate update for joins, delayed for leaves
-  const handlePresenceState = useCallback(() => {
-    if (!channelRef.current || !isSubscribed.current) return;
-    const state = channelRef.current.presenceState();
-    processPresenceState(state);
-  }, [processPresenceState]);
-
-  const handleJoin = useCallback(({ key, newPresences }) => {
-    // Clear any pending leave timeout for rejoining users
-    newPresences.forEach((presence) => {
-      if (presence?.user_id && leaveTimeouts.current.has(presence.user_id)) {
-        clearTimeout(leaveTimeouts.current.get(presence.user_id));
-        leaveTimeouts.current.delete(presence.user_id);
-      }
-    });
-    
-    // Immediate update for joins
-    handlePresenceState();
-  }, [handlePresenceState]);
-
-  const handleLeave = useCallback(({ key, leftPresences }) => {
-    // Delay leave updates to handle quick reconnects
-    leftPresences.forEach((presence) => {
-      if (!presence?.user_id) return;
-
-      // Clear existing timeout if any
-      if (leaveTimeouts.current.has(presence.user_id)) {
-        clearTimeout(leaveTimeouts.current.get(presence.user_id));
-      }
-
-      // Set new timeout
-      const timeout = setTimeout(() => {
-        handlePresenceState();
-        leaveTimeouts.current.delete(presence.user_id);
-      }, 2000); // 2 second grace period for leaves only
-
-      leaveTimeouts.current.set(presence.user_id, timeout);
-    });
-  }, [handlePresenceState]);
 
   useEffect(() => {
+    let channel = null;
+    let isSubscribed = false;
+    const leaveTimeouts = new Map();
+
     const setupPresence = async () => {
       try {
         const { data, error } = await supabaseQueries.supabase.auth.getUser();
         const user = data?.user;
         if (error || !user) return;
 
-        const channel = supabaseQueries.supabase.channel('presence:global');
-        channelRef.current = channel;
+        channel = supabaseQueries.supabase.channel('presence:global');
+
+        const updateOnlineUsers = () => {
+          if (!channel || !isSubscribed) return;
+          
+          const state = channel.presenceState();
+          const online = new Map();
+          
+          Object.entries(state).forEach(([presenceKey, presences]) => {
+            if (presences && Array.isArray(presences) && presences.length > 0) {
+              const presenceData = presences[0];
+              if (presenceData.user_id) {
+                online.set(presenceData.user_id, {
+                  user_id: presenceData.user_id,
+                  name: presenceData.name,
+                  avatar_url: presenceData.avatar_url,
+                  online_at: presenceData.online_at,
+                  presence_key: presenceKey
+                });
+              }
+            }
+          });
+          
+          setOnlineUsers(online);
+        };
 
         channel
-          .on('presence', { event: 'sync' }, handlePresenceState)
-          .on('presence', { event: 'join' }, handleJoin)
-          .on('presence', { event: 'leave' }, handleLeave);
+          .on('presence', { event: 'sync' }, () => {
+            updateOnlineUsers();
+          })
+          .on('presence', { event: 'join' }, ({ newPresences }) => {
+            // Clear any pending removal timeout for this user
+            newPresences.forEach(presence => {
+              if (presence.user_id && leaveTimeouts.has(presence.user_id)) {
+                clearTimeout(leaveTimeouts.get(presence.user_id));
+                leaveTimeouts.delete(presence.user_id);
+              }
+            });
+            updateOnlineUsers();
+          })
+          .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+            // Delay removal to handle quick reconnects
+            leftPresences.forEach(presence => {
+              if (presence.user_id) {
+                const timeout = setTimeout(() => {
+                  updateOnlineUsers();
+                  leaveTimeouts.delete(presence.user_id);
+                }, 60000); // 1 minute grace period
+                leaveTimeouts.set(presence.user_id, timeout);
+              }
+            });
+          });
 
         await channel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
-            isSubscribed.current = true;
-
-            try {
-              await channel.track({
-                user_id: user.id,
-                name: user.user_metadata?.name || user.email || 'Anonymous',
-                avatar_url: user.user_metadata?.avatar_url || null,
-                online_at: new Date().toISOString(),
-              });
-
-              // Quick initial sync
-              setTimeout(handlePresenceState, 100);
-            } catch (trackError) {
-              console.error('Error tracking presence:', trackError);
-            }
+            isSubscribed = true;
+            
+            await channel.track({
+              user_id: user.id,
+              name: user.user_metadata?.name || user.email || 'Anonymous',
+              avatar_url: user.user_metadata?.avatar_url || null,
+              online_at: new Date().toISOString(),
+            });
+            
+            // Initial sync
+            setTimeout(updateOnlineUsers, 200);
           }
         });
-      } catch (err) {
-        console.error('Setup presence error:', err);
+
+      } catch (error) {
+        console.error('Setup presence error:', error);
       }
     };
 
     setupPresence();
 
     return () => {
-      isSubscribed.current = false;
-      if (channelRef.current) {
-        channelRef.current.untrack();
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
+      isSubscribed = false;
+      if (channel) {
+        channel.untrack();
+        channel.unsubscribe();
       }
-
-      // Clear all pending timeouts
-      leaveTimeouts.current.forEach((timeout) => clearTimeout(timeout));
-      leaveTimeouts.current.clear();
+      // Clear all timeouts
+      leaveTimeouts.forEach(timeout => clearTimeout(timeout));
+      leaveTimeouts.clear();
     };
-  }, [handlePresenceState, handleJoin, handleLeave]);
+  }, []);
 
   return onlineUsers;
 };
 
-// Simplified component usage - remove the complex state management
+// Simple hook for checking if a user is online
 export const useIsUserOnline = (userId) => {
   const onlineUsers = useOnlineUsers();
-  return onlineUsers.has(userId);
+  const [isOnline, setIsOnline] = useState(false);
+
+  useEffect(() => {
+    const online = onlineUsers.has(userId);
+    setIsOnline(online);
+  }, [onlineUsers, userId]);
+
+  return isOnline;
 };
 
 // Conversations hooks
