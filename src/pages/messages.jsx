@@ -1,9 +1,9 @@
 import DirectMessages from "../components/dm/directMessaging";
 
-function Messages({user}) {
+function Messages({user, onlineUsers}) {
     return (
         <div>
-            <DirectMessages user={user} />
+            <DirectMessages user={user} onlineUsers={onlineUsers} />
         </div>
     );
 }

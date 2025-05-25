@@ -6,11 +6,11 @@ import {
   Ticket, Coffee, Link, Share2, BookOpen, User, Users, Send, Paperclip,
   MoreVertical, Smile
 } from 'lucide-react';
-import EmojiPicker from 'emoji-picker-react'; // Ensure this package is installed
+import EmojiPicker from 'emoji-picker-react';
 import { useConversationMessages } from '../../hooks/hooks';
 import RenderContentCard from './messageRender';
 
-export default function Messages({ user, onlineStatus }) {
+export default function Messages({ user, onlineUsers }) {
   const [activeTab, setActiveTab] = useState('dm');
   const [replyingTo, setReplyingTo] = useState(null);
   const [messageInput, setMessageInput] = useState('');
@@ -20,8 +20,9 @@ export default function Messages({ user, onlineStatus }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { recipientId, recipientName, recipientAvatar, content } = location.state || {};
+  const navigate = useNavigate();
+  const onlineStatus = onlineUsers.has(recipientId); // Check if recipientId is in onlineUsers
 
   const { 
     messages, 
