@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
-  Image, Lock, X, BarChart2, Send, CircleAlert, MessageSquare, 
-  Unlock, ImagePlus, Trash2, Pencil
+  Lock, X, Send, CircleAlert, MessageSquare, 
+  Unlock, ImagePlus, Trash2, Pencil, BarChart2
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useCreatePost } from '../../hooks/hooks';
@@ -12,8 +12,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTopics, setSelectedTopics] = useState([]);
-  const [showTopicSelector, setShowTopicSelector] = useState(false);
-  const [contentType, setContentType] = useState('text');
+  const [contentType, setContentType] = useState('product');
   const [articleContent, setArticleContent] = useState('');
   const [articleTitle, setArticleTitle] = useState('');
   const [audioTracks, setAudioTracks] = useState([{ title: '', url: '' }]);
@@ -25,36 +24,77 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   const [eventLocation, setEventLocation] = useState('');
   const [productTitle, setProductTitle] = useState('');
   const [productPrice, setProductPrice] = useState(0);
-  const [productVariants, setProductVariants] = useState([{ name: '', price: 0 }]);
+  const [productImages, setProductImages] = useState([]);
+  const [productVariants, setProductVariants] = useState([]);
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryImages, setGalleryImages] = useState([]);
   const [isCaptionOnly, setIsCaptionOnly] = useState(false);
-  const [monetizationModel, setMonetizationModel] = useState('');
-  const [contentPrice, setContentPrice] = useState(5000);
+  const [monetizationModel, setMonetizationModel] = useState('free');
+  const [contentPrice, setContentPrice] = useState(0);
   const [error, setError] = useState(null);
+  const [customTopic, setCustomTopic] = useState('');
 
-  const fileInputRef = useRef(null);
   const multipleFileInputRef = useRef(null);
+  const thumbnailInputRef = useRef(null);
 
   const { create, creating } = useCreatePost();
 
-  const suggestedTopics = [
-    'Finance', 'Business', 'Tech', 'Health', 'Education',
-    'Marketing', 'Investing', 'Crypto', 'Career', 'Mobile Money'
-  ];
+  const getSuggestedTopics = () => {
+    switch (contentType) {
+      case 'text':
+        return [
+          'Writing', 'Education', 'Literature', 'Research', 'Publishing',
+          'Journalism', 'Poetry', 'Essays', 'Fiction', 'Non-Fiction', 'Self-Help',
+          'Philosophy', 'History', 'Science', 'Technology Trends'
+        ];
+      case 'audio':
+        return [
+          'Music', 'Podcast', 'Audio Books', 'Interviews', 'Sound Design',
+          'Meditation', 'Storytelling', 'ASMR', 'Language Learning', 'Music Production',
+          'Radio Drama', 'Voice Acting', 'Soundscapes', 'Educational Audio', 'Live Sessions'
+        ];
+      case 'video':
+        return [
+          'Film', 'Tutorials', 'Vlogging', 'Reviews', 'Cinematics',
+          'Documentaries', 'Gaming', 'Cooking', 'Fitness', 'Travel Vlogs',
+          'Animation', 'Interviews', 'Behind the Scenes', 'Live Streams', 'Educational Videos'
+        ];
+      case 'event':
+        return [
+          'Workshops', 'Conferences', 'Meetups', 'Seminars', 'Festivals',
+          'Cinema Movie Tickets', 'Concerts', 'Theater Plays', 'Art Exhibitions',
+          'Charity Events', 'Sports Matches', 'Webinars', 'Trade Shows', 'Book Launches', 'Cultural Festivals'
+        ];
+      case 'product':
+        return [
+          'Fashion', 'Electronics', 'Home', 'Beauty', 'Gadgets',
+          'Clothing', 'Footwear', 'Jewelry', 'Watches', 'Accessories',
+          'Furniture', 'Appliances', 'Kitchenware', 'Sports Equipment', 'Toys',
+          'Books', 'Health Supplements', 'Pet Supplies', 'Automotive Parts', 'Outdoor Gear'
+        ];
+      case 'gallery':
+        return [
+          'Photography', 'Art', 'Exhibits', 'Travel', 'Nature',
+          'Portraits', 'Street Photography', 'Abstract Art', 'Wildlife', 'Architecture',
+          'Fashion Photography', 'Food Photography', 'Landscape', 'Macro', 'Digital Art'
+        ];
+      default:
+        return [];
+    }
+  };
 
   const monetizationModels = [
     {
-      id: 'paid_dm',
-      name: 'Monetised',
-      icon: <MessageSquare size={14} />,
-      category: 'messaging'
-    },
-    {
       id: 'free',
-      name: 'Free',
+      name: 'Free Access',
       icon: <Unlock size={14} />,
       category: 'none'
+    },
+    {
+      id: 'paid',
+      name: 'Paid Access',
+      icon: <MessageSquare size={14} />,
+      category: 'messaging'
     }
   ];
 
@@ -62,8 +102,8 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
     { id: 'text', name: 'Text Article' },
     { id: 'audio', name: 'Audio Content' },
     { id: 'video', name: 'Video Content' },
-    { id: 'event', name: 'Event Details' },
-    { id: 'product', name: 'Product Information' },
+    { id: 'event', name: 'Event' },
+    { id: 'product', name: 'Product' },
     { id: 'gallery', name: 'Image Gallery' }
   ];
 
@@ -72,7 +112,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       setIsPremium(false);
       return;
     }
-    if (monetizationModel === 'paid_dm') {
+    if (monetizationModel === 'paid') {
       setIsPremium(true);
     }
   }, [monetizationModel, isCaptionOnly]);
@@ -80,9 +120,10 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   useEffect(() => {
     if (isCaptionOnly) {
       setContentType('text');
-      setMonetizationModel('');
+      setMonetizationModel('free');
       setIsPremium(false);
-      setContentPrice(5000);
+      setContentPrice(0);
+      setProductPrice(0);
       setArticleContent('');
       setArticleTitle('');
       setAudioTracks([{ title: '', url: '' }]);
@@ -93,12 +134,25 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       setEventDate('');
       setEventLocation('');
       setProductTitle('');
-      setProductPrice(0);
-      setProductVariants([{ name: '', price: 0 }]);
+      setProductImages([]);
+      setProductVariants([]);
       setGalleryTitle('');
       setGalleryImages([]);
     }
   }, [isCaptionOnly]);
+
+  // Sync productPrice and contentPrice when contentType is 'product'
+  useEffect(() => {
+    if (contentType === 'product') {
+      setContentPrice(productPrice);
+    }
+  }, [productPrice, contentType]);
+
+  useEffect(() => {
+    if (contentType === 'product') {
+      setProductPrice(contentPrice);
+    }
+  }, [contentPrice, contentType]);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -113,38 +167,45 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
     }
   };
 
-  const handleMultipleImagesSelect = (e) => {
+  const handleMultipleImagesSelect = (e, target) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     if (imageFiles.length !== files.length) {
       setError('Please select only image files');
+      return;
     }
-    const newGalleryImages = [...galleryImages];
-    imageFiles.forEach(file => {
+    const newImages = imageFiles.map(file => {
       const reader = new FileReader();
+      let preview = '';
       reader.onloadend = () => {
-        newGalleryImages.push({
-          file: file,
-          preview: reader.result,
-          caption: ''
-        });
-        setGalleryImages([...newGalleryImages]);
+        preview = reader.result;
+        if (target === 'product') {
+          setProductImages(prev => [...prev, { file, preview }]);
+        } else {
+          setGalleryImages(prev => [...prev, { file, preview, caption: '' }]);
+        }
       };
       reader.readAsDataURL(file);
+      return { file, preview };
     });
+    if (target === 'product') {
+      setProductImages(prev => [...prev, ...newImages]);
+    } else {
+      setGalleryImages(prev => [...prev, ...newImages]);
+    }
   };
 
-  const removeGalleryImage = (index) => {
-    const newImages = [...galleryImages];
+  const removeImage = (index, target) => {
+    const newImages = target === 'product' ? [...productImages] : [...galleryImages];
     newImages.splice(index, 1);
-    setGalleryImages(newImages);
+    target === 'product' ? setProductImages(newImages) : setGalleryImages(newImages);
   };
 
-  const updateGalleryImageCaption = (index, caption) => {
-    const newImages = [...galleryImages];
+  const updateImageCaption = (index, caption, target) => {
+    const newImages = target === 'product' ? [...productImages] : [...galleryImages];
     newImages[index].caption = caption;
-    setGalleryImages(newImages);
+    target === 'product' ? setProductImages(newImages) : setGalleryImages(newImages);
   };
 
   const addAudioTrack = () => {
@@ -164,7 +225,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   };
 
   const addProductVariant = () => {
-    setProductVariants([...productVariants, { name: '', price: 0 }]);
+    setProductVariants(prev => [...prev, { name: '', value: '' }]);
   };
 
   const removeProductVariant = (index) => {
@@ -191,16 +252,23 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
     }
   };
 
+  const handleCustomTopic = (e) => {
+    if (e.key === 'Enter' && customTopic.trim()) {
+      handleTopicToggle(customTopic.trim());
+      setCustomTopic('');
+    }
+  };
+
   const resetForm = () => {
     setCaption('');
     setIsPremium(false);
     setSelectedImage(null);
     setImagePreview(null);
     setSelectedTopics([]);
-    setShowTopicSelector(false);
-    setMonetizationModel('');
-    setContentPrice(5000);
-    setContentType('text');
+    setMonetizationModel('free');
+    setContentPrice(0);
+    setProductPrice(0);
+    setContentType('product');
     setArticleContent('');
     setArticleTitle('');
     setAudioTracks([{ title: '', url: '' }]);
@@ -211,12 +279,13 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
     setEventDate('');
     setEventLocation('');
     setProductTitle('');
-    setProductPrice(0);
-    setProductVariants([{ name: '', price: 0 }]);
+    setProductImages([]);
+    setProductVariants([]);
     setGalleryTitle('');
     setGalleryImages([]);
     setIsCaptionOnly(false);
     setError(null);
+    setCustomTopic('');
   };
 
   const handleDismiss = () => {
@@ -230,7 +299,6 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       return;
     }
 
-    // Validate content fields for non-caption-only posts, regardless of isPremium
     if (!isCaptionOnly) {
       switch(contentType) {
         case 'text':
@@ -258,8 +326,8 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
           }
           break;
         case 'product':
-          if (!productTitle || productPrice <= 0) {
-            setError('Please enter product title and price');
+          if (!productTitle || productPrice < 0) {
+            setError('Please enter product title and valid price');
             return;
           }
           break;
@@ -275,6 +343,11 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       }
     }
 
+    if (selectedTopics.length === 0) {
+      setError('Please select at least one topic');
+      return;
+    }
+
     setError(null);
 
     try {
@@ -286,18 +359,37 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
         const uploadResponse = await supabase.storage
           .from('media')
           .upload(filePath, selectedImage);
-        if (uploadResponse.error) {
-          console.error('Image upload error:', uploadResponse.error);
-          throw uploadResponse.error;
-        }
+        if (uploadResponse.error) throw uploadResponse.error;
         const { data: urlData } = supabase.storage
           .from('media')
           .getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
       }
 
+      let productImageUrls = [];
+      if (contentType === 'product' && productImages.length > 0) {
+        for (let i = 0; i < productImages.length; i++) {
+          const image = productImages[i];
+          if (image.file) {
+            const fileExt = image.file.name.split('.').pop();
+            const fileName = `${user.user_id}-product-${Date.now()}-${i}.${fileExt}`;
+            const filePath = `product-images/${fileName}`;
+            const uploadResponse = await supabase.storage
+              .from('media')
+              .upload(filePath, image.file);
+            if (uploadResponse.error) throw uploadResponse.error;
+            const { data: urlData } = supabase.storage
+              .from('media')
+              .getPublicUrl(filePath);
+            productImageUrls.push({
+              url: urlData.publicUrl
+            });
+          }
+        }
+      }
+
       let galleryUrls = [];
-      if (!isCaptionOnly && contentType === 'gallery' && galleryImages.length > 0) {
+      if (contentType === 'gallery' && galleryImages.length > 0) {
         for (let i = 0; i < galleryImages.length; i++) {
           const image = galleryImages[i];
           const fileExt = image.file.name.split('.').pop();
@@ -306,10 +398,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
           const galleryUploadResponse = await supabase.storage
             .from('media')
             .upload(filePath, image.file);
-          if (galleryUploadResponse.error) {
-            console.error('Gallery image upload error:', galleryUploadResponse.error);
-            throw galleryUploadResponse.error;
-          }
+          if (galleryUploadResponse.error) throw galleryUploadResponse.error;
           const { data: urlData } = supabase.storage
             .from('media')
             .getPublicUrl(filePath);
@@ -327,7 +416,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
         isPremium,
         selectedTopics,
         isCaptionOnly ? null : (monetizationModel === 'free' ? null : monetizationModel),
-        isCaptionOnly ? null : (isPremium ? contentPrice : null),
+        isCaptionOnly ? null : contentPrice,
         false,
         !isCaptionOnly ? contentType : undefined,
         !isCaptionOnly && contentType === 'text' ? articleTitle : undefined,
@@ -349,8 +438,8 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
         !isCaptionOnly && contentType === 'product' ? productTitle : undefined,
         !isCaptionOnly && contentType === 'product' ? productPrice : undefined,
         !isCaptionOnly && contentType === 'product' ? imageUrl : undefined,
+        !isCaptionOnly && contentType === 'product' ? JSON.stringify(productImageUrls) : undefined,
         !isCaptionOnly && contentType === 'product' ? JSON.stringify(productVariants) : undefined,
-        undefined,
         !isCaptionOnly && contentType === 'gallery' ? galleryTitle : undefined,
         !isCaptionOnly && contentType === 'gallery' ? galleryUrls.length : undefined,
         !isCaptionOnly && contentType === 'gallery' ? JSON.stringify(galleryUrls) : undefined,
@@ -476,37 +565,82 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
               onChange={(e) => setProductTitle(e.target.value)}
               className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
             />
-            <input
-              type="number"
-              placeholder="Enter product price..."
-              value={productPrice}
-              onChange={(e) => setProductPrice(isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
-              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 mb-2"
-            />
-            {productVariants.map((variant, index) => (
-              <div key={index} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  placeholder="Variant name"
-                  value={variant.name}
-                  onChange={(e) => updateProductVariant(index, 'name', e.target.value)}
-                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
-                />
-                <input
-                  type="number"
-                  placeholder="Variant price"
-                  value={variant.price}
-                  onChange={(e) => updateProductVariant(index, 'price', isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
-                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
-                />
-                <button onClick={() => removeProductVariant(index)} className="text-red-600">
-                  <Trash2 size={16} />
-                </button>
+            <div className="flex items-center mb-2">
+              <label className="text-sm font-medium text-gray-700 mr-2">Product Price</label>
+              <input
+                type="number"
+                placeholder="Enter product price..."
+                value={productPrice}
+                onChange={(e) => {
+                  const newPrice = isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value);
+                  setProductPrice(newPrice);
+                  setContentPrice(newPrice); // Sync with contentPrice
+                }}
+                className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+              />
+              <span className="ml-2 text-xs text-gray-700">UGX</span>
+            </div>
+            <div className="mb-2">
+              <div className="text-sm font-medium mb-1 text-gray-700">Product Images</div>
+              <button
+                onClick={() => multipleFileInputRef.current.click()}
+                className="text-red-600 text-xs flex items-center"
+              >
+                <ImagePlus size={16} className="mr-1" /> Add Product Images
+              </button>
+              <input
+                type="file"
+                ref={multipleFileInputRef}
+                onChange={(e) => handleMultipleImagesSelect(e, 'product')}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {productImages.map((image, index) => image.preview && (
+                  <div key={index} className="relative">
+                    <img 
+                      src={image.preview} 
+                      alt="Product" 
+                      className="w-16 h-16 object-cover rounded border border-gray-200" 
+                    />
+                    <button 
+                      onClick={() => removeImage(index, 'product')} 
+                      className="absolute top-0 right-0 bg-gray-800 bg-opacity-60 text-white p-1 rounded-full transform translate-x-1/2 -translate-y-1/2"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-            <button onClick={addProductVariant} className="text-red-600 text-xs">
-              Add Variant
-            </button>
+            </div>
+            <div className="mb-2">
+              <div className="text-sm font-medium mb-1 text-gray-700">Product Variants (e.g., Size, Color)</div>
+              {productVariants.map((variant, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Variant name (e.g., Size)"
+                    value={variant.name}
+                    onChange={(e) => updateProductVariant(index, 'name', e.target.value)}
+                    className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Variant value (e.g., Medium)"
+                    value={variant.value}
+                    onChange={(e) => updateProductVariant(index, 'value', e.target.value)}
+                    className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                  />
+                  <button onClick={() => removeProductVariant(index)} className="text-red-600">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <button onClick={addProductVariant} className="text-red-600 text-xs">
+                Add Variant
+              </button>
+            </div>
           </>
         );
       case 'gallery':
@@ -521,14 +655,14 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
             />
             <button
               onClick={() => multipleFileInputRef.current.click()}
-              className="text-red-600 text-xs mb-2"
+              className="text-red-600 text-xs mb-2 flex items-center"
             >
-              Add Images
+              <ImagePlus size={16} className="mr-1" /> Add Gallery Images
             </button>
             <input
               type="file"
               ref={multipleFileInputRef}
-              onChange={handleMultipleImagesSelect}
+              onChange={(e) => handleMultipleImagesSelect(e, 'gallery')}
               accept="image/*"
               multiple
               className="hidden"
@@ -540,10 +674,10 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
                   type="text"
                   placeholder="Image caption"
                   value={image.caption}
-                  onChange={(e) => updateGalleryImageCaption(index, e.target.value)}
+                  onChange={(e) => updateImageCaption(index, e.target.value, 'gallery')}
                   className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
                 />
-                <button onClick={() => removeGalleryImage(index)} className="text-red-600">
+                <button onClick={() => removeImage(index, 'gallery')} className="text-red-600">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -582,6 +716,38 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       </div>
 
       <div className="mb-3">
+        <div className="text-sm font-medium mb-1 text-gray-700">Post Thumbnail</div>
+        {imagePreview ? (
+          <div className="relative mb-3 rounded-lg overflow-hidden border border-gray-200">
+            <img src={imagePreview} alt="Thumbnail" className="w-full max-h-56 object-contain" />
+            <button 
+              onClick={() => {
+                setSelectedImage(null);
+                setImagePreview(null);
+              }}
+              className="absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white p-1 rounded-full"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => thumbnailInputRef.current.click()}
+            className="text-red-600 text-xs mb-2 flex items-center"
+          >
+            <ImagePlus size={16} className="mr-1" /> Add Post Thumbnail (Recommended for Visibility)
+          </button>
+        )}
+        <input
+          type="file"
+          ref={thumbnailInputRef}
+          onChange={handleImageSelect}
+          accept="image/*"
+          className="hidden"
+        />
+      </div>
+
+      <div className="mb-3">
         <button
           onClick={() => setIsCaptionOnly(!isCaptionOnly)}
           className={`flex items-center text-xs px-3 py-1 rounded-full transition ${
@@ -594,21 +760,6 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
           {isCaptionOnly ? 'Add Content Details' : 'Caption Only'}
         </button>
       </div>
-      
-      {imagePreview && (
-        <div className="relative mb-3 rounded-lg overflow-hidden border border-gray-200">
-          <img src={imagePreview} alt="Selected" className="w-full max-h-56 object-contain" />
-          <button 
-            onClick={() => {
-              setSelectedImage(null);
-              setImagePreview(null);
-            }}
-            className="absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white p-1 rounded-full"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
       
       {!isCaptionOnly && (
         <>
@@ -631,7 +782,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
           </div>
 
           <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="text-sm font-medium mb-2 text-gray-700">Monetization Options</div>
+            <div className="text-sm font-medium mb-2 text-gray-700">Access Options</div>
             <div className="flex flex-wrap gap-2">
               {monetizationModels.map(model => (
                 <button
@@ -650,18 +801,23 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
             </div>
           </div>
 
-          {isPremium && (
-            <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-100">
-              <div className="flex items-center text-red-800 mb-2">
-                <Lock size={14} className="mr-1" />
-                <span className="text-sm font-medium">Premium Content - Pay to Access</span>
+          {/* Show Set Price section only for non-product content types */}
+          {contentType !== 'product' && (
+            <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center text-gray-700 mb-2">
+                <span className="text-sm font-medium mr-1">Set Price</span>
+                <span className="text-xs text-gray-500">(Optional for all content)</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   value={contentPrice}
-                  onChange={(e) => setContentPrice(isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    const newPrice = isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value);
+                    setContentPrice(newPrice);
+                    if (contentType === 'product') setProductPrice(newPrice); // Sync with productPrice
+                  }}
                   className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 text-xs"
                   placeholder="Enter price in UGX"
                 />
@@ -671,6 +827,33 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
           )}
         </>
       )}
+      
+      <div className="mb-3">
+        <div className="text-sm font-medium mb-1 text-gray-700">Topics (Required)</div>
+        <input
+          type="text"
+          placeholder="Enter custom topic and press Enter..."
+          value={customTopic}
+          onChange={(e) => setCustomTopic(e.target.value)}
+          onKeyPress={handleCustomTopic}
+          className="w-full p-2 border border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700 text-xs mb-2"
+        />
+        <div className="flex flex-wrap gap-2">
+          {getSuggestedTopics().map(topic => (
+            <button
+              key={topic}
+              onClick={() => handleTopicToggle(topic)}
+              className={`px-2 py-0.5 rounded-full text-xs transition ${
+                selectedTopics.includes(topic)
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              }`}
+            >
+              #{topic}
+            </button>
+          ))}
+        </div>
+      </div>
       
       {selectedTopics.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
@@ -685,26 +868,6 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
         </div>
       )}
       
-      {showTopicSelector && (
-        <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex flex-wrap gap-2">
-            {suggestedTopics.map(topic => (
-              <button
-                key={topic}
-                onClick={() => handleTopicToggle(topic)}
-                className={`px-2 py-0.5 rounded-full text-xs transition ${
-                  selectedTopics.includes(topic)
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                }`}
-              >
-                #{topic}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      
       {error && (
         <div className="mb-3 p-2 bg-red-50 text-red-800 text-xs rounded-lg flex items-center">
           <CircleAlert size={14} className="mr-1" />
@@ -712,24 +875,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
         </div>
       )}
       
-      <div className="flex justify-between pt-2 border-t border-gray-100">
-        <div className="flex space-x-1 text-red-600">
-          <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => fileInputRef.current.click()}>
-            <Image size={16} />
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageSelect}
-              accept="image/*"
-              className="hidden"
-            />
-          </button>
-          
-          <button className="p-1.5 rounded-full hover:bg-red-50" onClick={() => setShowTopicSelector(!showTopicSelector)}>
-            <BarChart2 size={16} />
-          </button>
-        </div>
-        
+      <div className="flex justify-end pt-2 border-t border-gray-100">
         <div className="flex space-x-2">
           <button
             onClick={handleDismiss}

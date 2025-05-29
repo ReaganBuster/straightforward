@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export default function  CreatePost ({user}) {
-    const [showPostModal, setShowPostModal] = useState(false);
+    const [ setShowPostModal] = useState(false);
     const [expandPostInput, setExpandPostInput] = useState(false);
 
       const { 

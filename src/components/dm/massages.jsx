@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth, useConversations } from '../../hooks/hooks';
 import ChatsSection from '../dm/chatsSection';
-import MessageDetails from '../dm/messageDetails';
 
 const Messages = () => {
   const [selectedChat, setSelectedChat] = useState(null);

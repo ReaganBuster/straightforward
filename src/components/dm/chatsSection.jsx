@@ -12,7 +12,7 @@ import RightSidebar from '../feed/rightSidebar';
 
 const Chats = ({ user, conversations, loading }) => {
   const chatListRef = useRef(null);
-  const [hoveredChat, setHoveredChat] = useState(null);
+  const [ setHoveredChat] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
