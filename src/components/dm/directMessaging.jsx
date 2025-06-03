@@ -179,7 +179,7 @@ export default function Messages({ user, onlineUsers }) {
   };
 
   const handleBack = () => {
-    if (window.innerWidth <= 1024) navigate('/feed');
+    if (window.innerWidth <= 1024) navigate('/chat', { replace: true });
   };
 
   const getAvatarFallback = (name) => name ? name.charAt(0).toUpperCase() : '?';
@@ -302,9 +302,9 @@ export default function Messages({ user, onlineUsers }) {
         )}
         
         {loading && messages.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            <div className="animate-spin h-8 w-8 border-2 border-red-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-            Loading messages...
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-6 w-6 md:h-5 md:w-5 border-t-2 border-b-2 border-red-600"></div>
+            <p className="mt-4 text-gray-500 text-sm">Loading messages...</p>
           </div>
         )}
         

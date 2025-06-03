@@ -101,9 +101,9 @@ const Chats = ({ conversations, loading }) => {
 
         {/* Chat List */}
         <div className="bg-white">
-          {loading ? (
+          {loading ? ( 
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-red-500 rounded-full"></div>
+              <div className="animate-spin rounded-full h-6 w-6 md:h-5 md:w-5 border-t-2 border-b-2 border-red-600"></div>
               <p className="mt-4 text-gray-500 text-sm">Loading chats...</p>
             </div>
           ) : conversations.length === 0 ? (
