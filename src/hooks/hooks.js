@@ -374,7 +374,7 @@ export const useOnlineUsers = () => {
         }
       });
       setOnlineUsers(online);
-      console.log('Updated Online Users:', Array.from(online.entries()));
+      // console.log('Updated Online Users:', Array.from(online.entries()));
     };
 
     const setupPresence = async () => {
