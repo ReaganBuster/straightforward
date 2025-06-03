@@ -28,7 +28,7 @@ const MobileNavBar = ({ user, toggleSidebar }) => {
         onClick={() => navigate('/profile')}
       >
         <img 
-          src={profile?.avatar_url || 'https://via.placeholder.com/32'} 
+          src={profile?.avatar_url}
           alt="Profile" 
           className="w-full h-full object-cover"
         />

@@ -514,7 +514,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [dmAccess, setDmAccess] = useState(null);
+  // const [dmAccess, setDmAccess] = useState(null);
 
   const initializeConversation = useCallback(async () => {
     if (!initiatorId || !recipientId || !userId) {
@@ -525,9 +525,9 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
 
     try {
       setLoading(true);
-      const { conversation_id: convoId } = await supabaseQueries.startConversation(initiatorId, recipientId);
-      const access = await supabaseQueries.checkDmAccess(convoId, userId);
-      setDmAccess(access);
+      // const { conversation_id: convoId } = await supabaseQueries.startConversation(initiatorId, recipientId);
+      // const access = await supabaseQueries.checkDmAccess(convoId, userId);
+      // setDmAccess(access);
 
       const messagesData = await supabaseQueries.getConversationMessages(initiatorId, recipientId, userId, 1, 20);
       setMessages(messagesData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))); // Sort by created_at
@@ -691,16 +691,16 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
     }
   };
 
-  const requestDmAccess = async (recipientId, amount = null, postId = null) => {
-    try {
-      const result = await supabaseQueries.requestDmAccess(userId, recipientId, amount, postId);
-      if (result.success) setDmAccess({ has_access: true, paid_amount: amount });
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
+  // const requestDmAccess = async (recipientId, amount = null, postId = null) => {
+  //   try {
+  //     const result = await supabaseQueries.requestDmAccess(userId, recipientId, amount, postId);
+  //     if (result.success) setDmAccess({ has_access: true, paid_amount: amount });
+  //     return result;
+  //   } catch (err) {
+  //     setError(err.message);
+  //     throw err;
+  //   }
+  // };
 
   const addInitialMessage = (message) => {
     setMessages(prevMessages => {
@@ -714,11 +714,11 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
     loading,
     error,
     hasMore,
-    dmAccess,
+    // dmAccess,
     loadMoreMessages,
     sendMessage,
     processPayment,
-    requestDmAccess,
+    // requestDmAccess,
     initializeConversation,
     refreshMessages: () => fetchMessages(1),
     addInitialMessage,
