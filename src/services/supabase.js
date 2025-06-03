@@ -282,111 +282,122 @@ export const getTopics = async () => {
 export const getFeedPosts = async (userId, page = 1, pageSize = 10, feedType = 'discover') => {
   try {
     const startIndex = (page - 1) * pageSize;
-    
-    // Base query - select posts and join with users and content tables
-    let query = supabase
-      .from('posts')
-      .select(`
-        *,
-        author:users(
-          user_id, 
-          username, 
-          name, 
-          avatar_url, 
-          is_verified, 
-          expertise, 
-          rate_per_msg, 
-          response_rate, 
-          avg_response_time, 
-          rating,
-          currency
-        )
-      `)
-      .range(startIndex, startIndex + pageSize - 1)
-      .order('created_at', { ascending: false });
-    
-    // Apply feed type filters
+
+    // --- Apply feed type filters first to potentially short-circuit ---
+    let postIdsToFilter = null; // Will hold the array of post_ids if filtering by likes/bookmarks
+
     if (feedType === 'bookmarks') {
-      //fetch user bookmarks
-      if (!userId) return [];
+      if (!userId) return []; // No userId, no bookmarks, return empty
       const { data: bookmarksData, error: bookmarksError } = await supabase
         .from('bookmarks')
         .select('post_id')
         .eq('user_id', userId);
       if (bookmarksError) throw bookmarksError;
       const bookmarkedPostIds = bookmarksData?.map(bookmark => bookmark.post_id) || [];
-      if (bookmarkedPostIds.length > 0) {
-        query = query.in('post_id', bookmarkedPostIds);
+
+      if (bookmarkedPostIds.length === 0) {
+        return []; // User has no bookmarks, return empty array immediately
       }
+      postIdsToFilter = bookmarkedPostIds;
 
     } else if (feedType === 'likes') {
-      // Get posts that the current user likes
-      if (!userId) return [];
-
+      if (!userId) return []; // No userId, no likes, return empty
       const { data: likesData, error: likesError } = await supabase
         .from('post_likes')
         .select('post_id')
         .eq('user_id', userId);
       if (likesError) throw likesError;
       const likedPostsIds = likesData?.map(like => like.post_id) || [];
-      if (likedPostsIds.length > 0) {
-        query = query.in('post_id', likedPostsIds);
-      } else {
-        return [];
+
+      if (likedPostsIds.length === 0) {
+        return []; // User has no likes, return empty array immediately
       }
+      postIdsToFilter = likedPostsIds;
     }
-    
-    // Execute the query
+
+    // --- Base query - select posts and join with users and content tables ---
+    let query = supabase
+      .from('posts')
+      .select(`
+        *,
+        author:users(
+          user_id,
+          username,
+          name,
+          avatar_url,
+          is_verified,
+          expertise,
+          rate_per_msg,
+          response_rate,
+          avg_response_time,
+          rating,
+          currency
+        )
+      `)
+      .range(startIndex, startIndex + pageSize - 1)
+      .order('created_at', { ascending: false });
+
+    // --- Apply the filter if postIdsToFilter has been set (for bookmarks or likes) ---
+    if (postIdsToFilter !== null) {
+      query = query.in('post_id', postIdsToFilter);
+    }
+
+    // --- Execute the query ---
     const { data: posts, error } = await query;
-    
+
     if (error) throw error;
     if (!posts) return [];
-    
-    // If user is logged in, add liked/bookmarked status
+
+    // --- If user is logged in, add liked/bookmarked status ---
     if (userId) {
-      // Get user's likes
+      // Get user's likes for the fetched posts
       const { data: likesData } = await supabase
         .from('post_likes')
         .select('post_id')
         .eq('user_id', userId)
-        .in('post_id', posts.map(post => post.post_id));
-      
-      // Get user's bookmarks
+        .in('post_id', posts.map(post => post.post_id)); // Only check for fetched posts
+
+      // Get user's bookmarks for the fetched posts
       const { data: bookmarksData } = await supabase
         .from('bookmarks')
         .select('post_id')
         .eq('user_id', userId)
-        .in('post_id', posts.map(post => post.post_id));
-      
+        .in('post_id', posts.map(post => post.post_id)); // Only check for fetched posts
+
       const likedPostIds = new Set(likesData?.map(like => like.post_id) || []);
       const bookmarkedPostIds = new Set(bookmarksData?.map(bookmark => bookmark.post_id) || []);
-      
+
       // Add like and bookmark status
       posts.forEach(post => {
         post.is_liked = likedPostIds.has(post.post_id);
         post.is_bookmarked = bookmarkedPostIds.has(post.post_id);
       });
     }
-    
-    // Get like counts
-    const likeCountsMap = {};
-    for (const post of posts) {
-      const { count } = await supabase
-        .from('post_likes')
-        .select('*', { count: 'exact', head: true })
-        .eq('post_id', post.post_id);
-    
-      likeCountsMap[post.post_id] = count || 0;
-    }
 
-    // Add like counts
+    // --- Get like counts ---
+    // Efficiently fetch all like counts in one go for the fetched posts
+    const { data: allLikesData, error: allLikesError } = await supabase
+      .from('post_likes')
+      .select('post_id', { count: 'exact' }) // Select post_id and get exact count
+      .in('post_id', posts.map(post => post.post_id));
+
+    if (allLikesError) throw allLikesError;
+
+    // Aggregate counts
+    const likeCountsMap = {};
+    allLikesData.forEach(like => {
+      likeCountsMap[like.post_id] = (likeCountsMap[like.post_id] || 0) + 1;
+    });
+
+    // Add like counts to each post
     posts.forEach(post => {
       post.like_count = likeCountsMap[post.post_id] || 0;
     });
-    
+
     return posts;
   } catch (error) {
     console.error('Error fetching posts:', error);
+    // Rethrow a generic error for the client to handle
     throw new Error('Failed to fetch posts');
   }
 };

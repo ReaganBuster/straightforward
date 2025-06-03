@@ -227,7 +227,7 @@ export default function Messages({ user, onlineUsers }) {
                 </div>
               )}
               <div 
-                className="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-red-200 absolute top-0 left-0 hidden"
+                className="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-red-200 absolute top-0 left-0"
                 style={{ display: 'none' }}
               >
                 {getAvatarFallback(recipientName)}
