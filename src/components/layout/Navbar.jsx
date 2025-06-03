@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MoreVertical } from 'lucide-react';
+import { useProfile } from '../../hooks/hooks';
+import Favicon from '../../assets/favicon.svg';
 
 const MobileNavBar = ({ user, toggleSidebar }) => {
   const navigate = useNavigate();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const { profile } = useProfile(user.id);
 
   const handleMoreClick = () => {
     setShowMoreMenu(!showMoreMenu);
@@ -25,17 +28,19 @@ const MobileNavBar = ({ user, toggleSidebar }) => {
         onClick={() => navigate('/profile')}
       >
         <img 
-          src={user?.profile_avatar_url || 'https://via.placeholder.com/32'} 
+          src={profile?.avatar_url || 'https://via.placeholder.com/32'} 
           alt="Profile" 
           className="w-full h-full object-cover"
         />
       </div>
-      <button 
-        onClick={toggleSidebar}
-        className="bg-gradient-to-r from-red-600 to-red-700 text-white text-base font-bold py-2 px-3 rounded-lg mx-auto order-2 hover:from-red-700 hover:to-red-800 transition-colors"
-      >
-        Content Market
-      </button>
+      <div className="order-2 mx-auto">
+        <img 
+          src={Favicon} 
+          alt="App Icon" 
+          className="w-10 h-10 cursor-pointer"
+          onClick={toggleSidebar}
+        />
+      </div>
       <div className="relative order-3">
         <button 
           onClick={handleMoreClick}

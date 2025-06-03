@@ -49,7 +49,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
     setShowPostModal(true);
   };
 
-  const handlePostCreated = (newPost) => {
+  const handlePostCreated = () => {
     setShowPostModal(false);
   };
 
@@ -98,7 +98,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-lg font-bold py-2 px-3 rounded-lg">
-            Content Market
+            Kontent Market
           </div>
           <button 
             className="md:hidden text-gray-600 hover:text-gray-800"

@@ -5,10 +5,13 @@ import {
   Image, Lock, 
   DollarSign, 
 } from 'lucide-react';
+import { useProfile } from '../../hooks/hooks';
+
 
 export default function  CreatePost ({user}) {
     const [ setShowPostModal] = useState(false);
     const [expandPostInput, setExpandPostInput] = useState(false);
+    const {profile} = useProfile(user.id)
 
       const { 
         addPost
@@ -31,7 +34,7 @@ export default function  CreatePost ({user}) {
             ) : (
             <div className="flex">
                 <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-                <img src="/api/placeholder/32/32" alt="Profile" className="w-full h-full object-cover" />
+                <img src={profile?.avatar_url || 'https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg'} alt="Profile" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1">
                 <input

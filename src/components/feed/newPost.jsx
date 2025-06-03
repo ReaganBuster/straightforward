@@ -4,7 +4,7 @@ import {
   Unlock, ImagePlus, Trash2, Pencil, BarChart2
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
-import { useCreatePost } from '../../hooks/hooks';
+import { useCreatePost, useProfile } from '../../hooks/hooks';
 
 const NewPost = ({ user, onPostCreated, onClose }) => {
   const [caption, setCaption] = useState('');
@@ -33,6 +33,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   const [contentPrice, setContentPrice] = useState(0);
   const [error, setError] = useState(null);
   const [customTopic, setCustomTopic] = useState('');
+  const {profile} = useProfile(user.id)
 
   const multipleFileInputRef = useRef(null);
   const thumbnailInputRef = useRef(null);
@@ -694,7 +695,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       <div className="flex mb-3">
         <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
           <img 
-            src={user?.avatar_url || 'https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg'} 
+            src={profile?.avatar_url || 'https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg'} 
             alt="Profile" 
             className="w-full h-full object-cover"
             onError={(e) => {

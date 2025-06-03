@@ -12,168 +12,245 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Posts Functions
  */
 
-// Create a new post
+// Create a new post with various content types
 export const createPost = async (
   userId,
-  content,
-  imageUrl,
+  caption, // Renamed 'content' to 'caption' for clarity based on 'posts' table
+  thumbnailUrl, // Renamed 'imageUrl' to 'thumbnailUrl'
   isPremium,
   topics = [],
   monetizationModel = null,
   dmFee = null,
   requiresSubscription = false,
-  contentType,
+  contentType, // This becomes crucial for branching logic
+
+  // Article specific parameters
   articleTitle,
-  // articlePreview,
   articleContent,
   articlePages,
   articleFormat,
   articleFileUrl,
+
+  // Audio specific parameters
   audioTitle,
   audioTracks,
+
+  // Video specific parameters
   videoTitle,
   videoThumbnailUrl,
   videoUrl,
   videoDuration,
+
+  // Event specific parameters
   eventTitle,
   eventDate,
   eventTime,
   eventLocation,
+
+  // Product specific parameters
   productTitle,
   productPrice,
   productImageUrl,
   productVariants,
   productStockStatus,
+
+  // Gallery specific parameters
   galleryTitle,
   galleryTotalImages,
   galleryImages,
+
+
   monetizationRequired
 ) => {
   try {
     let fullContentId = null;
 
-    // Log all content-related fields to see what’s being passed
-    console.log('Content-related fields:', {
-      contentType,
-      articleTitle,
-      articleContent,
-      articlePages,
-      articleFormat,
-      articleFileUrl,
-      audioTitle,
-      audioTracks,
-      videoTitle,
-      videoThumbnailUrl,
-      videoUrl,
-      videoDuration,
-      eventTitle,
-      eventDate,
-      eventTime,
-      eventLocation,
-      productTitle,
-      productPrice,
-      productImageUrl,
-      productVariants,
-      productStockStatus,
-      galleryTitle,
-      galleryTotalImages,
-      galleryImages,
-      monetizationRequired
-    });
-
-    // Always insert into the content table if there's relevant content data
-    const hasContentData = contentType || articleTitle || articleContent || articlePages ||
-      articleFormat || articleFileUrl || audioTitle || audioTracks || videoTitle || videoThumbnailUrl ||
-      videoUrl || videoDuration || eventTitle || eventDate || eventTime || eventLocation || productTitle ||
-      productPrice || productImageUrl || productVariants || productStockStatus || galleryTitle ||
-      galleryTotalImages || galleryImages;
-
-    console.log('hasContentData:', hasContentData);
-
-    if (hasContentData) {
-      const contentDataToInsert = {
-        content_type: contentType || null,
-        article_title: articleTitle || null,
-        // article_preview: articlePreview || null,
-        article_content: articleContent || null,
-        article_pages: articlePages || 0,
-        article_format: articleFormat || null,
-        article_file_url: articleFileUrl || null,
-        audio_title: audioTitle || null,
-        audio_tracks: audioTracks || null,
-        video_title: videoTitle || null,
-        video_thumbnail_url: videoThumbnailUrl || null,
-        video_url: videoUrl || null,
-        video_duration: videoDuration || null,
-        event_title: eventTitle || null,
-        event_date: eventDate || null,
-        event_time: eventTime || null,
-        event_location: eventLocation || null,
-        product_title: productTitle || null,
-        product_price: productPrice || null,
-        product_image_url: productImageUrl || null,
-        product_variants: productVariants || null,
-        product_stock_status: productStockStatus || null,
-        gallery_title: galleryTitle || null,
-        gallery_total_images: galleryTotalImages || null,
-        gallery_images: galleryImages || null,
-        monetization_required: monetizationRequired !== undefined ? monetizationRequired : !!monetizationModel
-      };
-
-      console.log('Inserting into content table:', contentDataToInsert);
-
+    // --- Step 1: Insert into the main 'content' table ---
+    // This is always done if a content type is provided, as it's the root of specific content.
+    if (contentType) {
       const contentResponse = await supabase
         .from('content')
-        .insert(contentDataToInsert)
+        .insert({
+          content_type: contentType,
+          monetization_required: monetizationRequired !== undefined ? monetizationRequired : !!monetizationModel
+        })
         .select('content_id')
         .single();
 
       if (contentResponse.error) {
-        console.error('Content insertion error:', contentResponse.error);
+        console.error('Main content insertion error:', contentResponse.error);
         throw contentResponse.error;
       }
       fullContentId = contentResponse.data.content_id;
-      console.log('Content inserted, fullContentId:', fullContentId);
+      console.log('Main content inserted, fullContentId:', fullContentId);
+
+      // --- Step 2: Insert into the specific content type table based on 'contentType' ---
+      switch (contentType) {
+        case 'article':
+          { const articleResponse = await supabase
+            .from('article_content')
+            .insert({
+              content_id: fullContentId,
+              article_title: articleTitle,
+              article_content: articleContent,
+              article_pages: articlePages || 0,
+              article_format: articleFormat,
+              article_file_url: articleFileUrl,
+            })
+            .single();
+          if (articleResponse.error) throw articleResponse.error;
+          console.log('Article content inserted.');
+          break; }
+
+        case 'audio':
+          { const audioResponse = await supabase
+            .from('audio_content')
+            .insert({
+              content_id: fullContentId,
+              audio_title: audioTitle,
+              audio_tracks: audioTracks, // Ensure audioTracks is a valid JSONB structure
+            })
+            .single();
+          if (audioResponse.error) throw audioResponse.error;
+          console.log('Audio content inserted.');
+          break; }
+
+        case 'video':
+          { const videoResponse = await supabase
+            .from('video_content')
+            .insert({
+              content_id: fullContentId,
+              video_title: videoTitle,
+              video_duration: videoDuration,
+              video_thumbnail_url: videoThumbnailUrl,
+              video_url: videoUrl,
+            })
+            .single();
+          if (videoResponse.error) throw videoResponse.error;
+          console.log('Video content inserted.');
+          break; }
+
+        case 'event':
+          { const eventResponse = await supabase
+            .from('event_content')
+            .insert({
+              content_id: fullContentId,
+              event_title: eventTitle,
+              event_date: eventDate,
+              event_time: eventTime,
+              event_location: eventLocation,
+            })
+            .single();
+          if (eventResponse.error) throw eventResponse.error;
+          console.log('Event content inserted.');
+          break; }
+
+        case 'product':
+          { const productResponse = await supabase
+            .from('product_content')
+            .insert({
+              content_id: fullContentId,
+              product_title: productTitle,
+              product_price: productPrice,
+              product_image_url: productImageUrl, // Ensure productImageUrl is valid JSONB
+              product_stock_status: productStockStatus,
+            })
+            .single();
+          if (productResponse.error) throw productResponse.error;
+          console.log('Product content inserted.');
+
+          // Handle product variants if they are a separate table
+          if (productVariants && productVariants.length > 0) {
+            const variantInserts = productVariants.map(variant => ({
+              content_id: fullContentId,
+              variant_name: variant.variant_name,
+              variant_sku: variant.variant_sku,
+              variant_price: variant.variant_price,
+              // ... other variant fields
+            }));
+            const variantResponse = await supabase
+              .from('product_variants')
+              .insert(variantInserts);
+            if (variantResponse.error) throw variantResponse.error;
+            console.log('Product variants inserted.');
+          }
+          break; }
+
+        case 'gallery':
+          { const galleryResponse = await supabase
+            .from('gallery_content')
+            .insert({
+              content_id: fullContentId,
+              gallery_title: galleryTitle,
+              gallery_total_images: galleryTotalImages, // Or derive this in DB from gallery_images count
+            })
+            .single();
+          if (galleryResponse.error) throw galleryResponse.error;
+          console.log('Gallery content inserted.');
+
+          // Handle gallery images if they are a separate table
+          if (galleryImages && galleryImages.length > 0) {
+            const imageInserts = galleryImages.map(image => ({
+              content_id: fullContentId,
+              image_url: image.image_url,
+              image_caption: image.image_caption,
+              image_order: image.image_order,
+            }));
+            const imageResponse = await supabase
+              .from('gallery_images')
+              .insert(imageInserts);
+            if (imageResponse.error) throw imageResponse.error;
+            console.log('Gallery images inserted.');
+          }
+          break; }
+
+        default:
+          console.warn(`Unknown content type: ${contentType}. No specific content table insertion performed.`);
+          // If you have a default simple post without specific content, you might handle it here
+          break;
+      }
     } else {
-      console.log('No content data to insert into content table.');
+      console.log('No content type provided. Creating a post without specific content.');
     }
 
+    // --- Step 3: Insert into the 'posts' table ---
     const postResponse = await supabase
       .from('posts')
       .insert({
         user_id: userId,
-        caption: content,
-        thumbnail_url: imageUrl,
+        caption: caption, // Using 'caption' parameter
+        thumbnail_url: thumbnailUrl, // Using 'thumbnailUrl' parameter
         is_premium: isPremium,
         monetization_model: monetizationModel,
         dm_fee: dmFee || null,
         requires_subscription: requiresSubscription,
-        full_content_id: fullContentId
+        full_content_id: fullContentId // This links the post to its content
       })
       .select('post_id')
       .single();
-    
+
     if (postResponse.error) {
       console.error('Post insertion error:', postResponse.error);
       throw postResponse.error;
     }
-    
+
+    // --- Step 4: Insert into 'post_topics' table (if applicable) ---
     if (topics && topics.length > 0) {
       const topicInserts = topics.map(topic => ({
         post_id: postResponse.data.post_id,
         topic: topic
       }));
-      
+
       const topicResponse = await supabase
         .from('post_topics')
         .insert(topicInserts);
-        
+
       if (topicResponse.error) {
         console.error('Topic insertion error:', topicResponse.error);
         throw topicResponse.error;
       }
     }
-    
+
     return postResponse.data.post_id;
   } catch (error) {
     console.error('Error creating post:', error);
@@ -223,44 +300,7 @@ export const getFeedPosts = async (userId, page = 1, pageSize = 10, feedType = '
           avg_response_time, 
           rating,
           currency
-        ),
-        content:full_content_id( 
-          content_id, 
-          content_type, 
-          article_title, 
-          article_content, 
-          article_pages, 
-          article_format, 
-          article_file_url, 
-          audio_title, 
-          audio_tracks, 
-          video_title, 
-          video_duration, 
-          video_thumbnail_url, 
-          video_url, 
-          event_title, 
-          event_date, 
-          event_time, 
-          event_location, 
-          event_confirmation_code, 
-          event_qr_code_url, 
-          product_title, 
-          product_price, 
-          product_image_url, 
-          product_variants, 
-          product_stock_status, 
-          gallery_title, 
-          gallery_total_images, 
-          gallery_images, 
-          poll_question, 
-          poll_ends_at, 
-          poll_options, 
-          poll_total_votes, 
-          subscription_title, 
-          subscription_price, 
-          subscription_billing_frequency, 
-          subscription_benefits, 
-          monetization_required )
+        )
       `)
       .range(startIndex, startIndex + pageSize - 1)
       .order('created_at', { ascending: false });
@@ -363,44 +403,6 @@ export const getUserPosts = async (userId, page = 1, pageSize = 12, contentType 
           avg_response_time, 
           rating,
           currency
-        ),
-        content:full_content_id (
-          content_id, 
-          content_type, 
-          article_title, 
-          article_content, 
-          article_pages, 
-          article_format, 
-          article_file_url, 
-          audio_title, 
-          audio_tracks, 
-          video_title, 
-          video_duration, 
-          video_thumbnail_url, 
-          video_url, 
-          event_title, 
-          event_date, 
-          event_time, 
-          event_location, 
-          event_confirmation_code, 
-          event_qr_code_url, 
-          product_title, 
-          product_price, 
-          product_image_url, 
-          product_variants, 
-          product_stock_status, 
-          gallery_title, 
-          gallery_total_images, 
-          gallery_images, 
-          poll_question, 
-          poll_ends_at, 
-          poll_options, 
-          poll_total_votes, 
-          subscription_title, 
-          subscription_price, 
-          subscription_billing_frequency, 
-          subscription_benefits, 
-          monetization_required 
         )
       `, { count: 'exact' })
       .eq('user_id', userId)
