@@ -138,13 +138,6 @@ const SocialFeed = ({ user }) => {
           <CreatePost user={user} onPostCreated={handlePostCreated} />
         </div>
 
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="flex justify-center items-center p-4">
-            <div className="animate-spin rounded-full h-6 w-6 md:h-5 md:w-5 border-t-2 border-b-2 border-red-600"></div>
-          </div>
-        )}
-
         {/* Empty State */}
         {!loading && posts.length === 0 && (
           <div className="text-center p-4 text-gray-500 text-sm">
@@ -166,6 +159,13 @@ const SocialFeed = ({ user }) => {
             />
           ))}
         </div>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="flex justify-center items-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 md:h-5 md:w-5 border-t-2 border-b-2 border-red-600"></div>
+          </div>
+        )}
 
         {/* Load More */}
         {!loading && posts.length > 0 && hasMore && (

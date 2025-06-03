@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import RightSidebar from '../feed/rightSidebar';
 
-const Chats = ({ user, conversations, loading }) => {
+const Chats = ({ conversations, loading }) => {
   const chatListRef = useRef(null);
   const [ setHoveredChat] = useState(null);
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ const Chats = ({ user, conversations, loading }) => {
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 shadow-sm flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-red-100">
+            {/* <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-red-100">
               {user?.avatar_url ? (
                 <img src={user.avatar_url} alt="Your avatar" className="object-cover w-full h-full" />
               ) : (
@@ -86,7 +86,7 @@ const Chats = ({ user, conversations, loading }) => {
                   {getAvatarFallback(user?.name || user?.username)}
                 </div>
               )}
-            </div>
+            </div> */}
             <div>
               <h1 className="text-red-600 font-semibold text-lg">Chats</h1>
               <p className="text-gray-500 text-xs">
