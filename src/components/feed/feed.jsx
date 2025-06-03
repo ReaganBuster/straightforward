@@ -33,8 +33,8 @@ const SocialFeed = ({ user }) => {
     switch (activeTab) {
       case 'bookmarks':
         return posts.length > 0 ? 'Your saved posts.' : 'No bookmarks yet. Save posts to see them here.';
-      case 'liked':
-        return posts.length > 0 ? 'Posts you’ve liked.' : 'No liked posts yet. Like posts to see them here.';
+      case 'likes':
+        return posts.length > 0 ? 'Posts you\'ve liked.' : 'No liked posts yet. Like posts to see them here.';
       case 'discover':
       default:
         return 'Explore new posts from the community.';
@@ -123,9 +123,9 @@ const SocialFeed = ({ user }) => {
               </button>
               <button
                 className={`px-4 py-2 font-medium text-sm rounded-full ${
-                  activeTab === 'liked' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'
+                  activeTab === 'likes' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'
                 }`}
-                onClick={() => handleTabChange('liked')}
+                onClick={() => handleTabChange('likes')}
               >
                 Likes
               </button>

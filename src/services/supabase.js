@@ -306,19 +306,31 @@ export const getFeedPosts = async (userId, page = 1, pageSize = 10, feedType = '
       .order('created_at', { ascending: false });
     
     // Apply feed type filters
-    if (feedType === 'trending') {
-      query = query.eq('is_trending', true);
-    } else if (feedType === 'following' && userId) {
-      // Get posts from users that the current user follows (assumes a follows table exists)
-      const { data: followingData } = await supabase
-        .from('follows')
-        .select('followed_id')
-        .eq('follower_id', userId);
-      
-      const followingIds = followingData?.map(follow => follow.followed_id) || [];
-      
-      if (followingIds.length > 0) {
-        query = query.in('user_id', followingIds);
+    if (feedType === 'bookmarks') {
+      //fetch user bookmarks
+      if (!userId) return [];
+      const { data: bookmarksData, error: bookmarksError } = await supabase
+        .from('bookmarks')
+        .select('post_id')
+        .eq('user_id', userId);
+      if (bookmarksError) throw bookmarksError;
+      const bookmarkedPostIds = bookmarksData?.map(bookmark => bookmark.post_id) || [];
+      if (bookmarkedPostIds.length > 0) {
+        query = query.in('post_id', bookmarkedPostIds);
+      }
+
+    } else if (feedType === 'likes') {
+      // Get posts that the current user likes
+      if (!userId) return [];
+
+      const { data: likesData, error: likesError } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', userId);
+      if (likesError) throw likesError;
+      const likedPostsIds = likesData?.map(like => like.post_id) || [];
+      if (likedPostsIds.length > 0) {
+        query = query.in('post_id', likedPostsIds);
       } else {
         return [];
       }
