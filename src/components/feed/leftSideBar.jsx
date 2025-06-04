@@ -197,7 +197,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
           </div>
         </div>
         
-        <div className="p-2 bg-red-50 rounded-lg mb-4 border border-red-100">
+        {/* <div className="p-2 bg-red-50 rounded-lg mb-4 border border-red-100">
           <div className="flex items-center text-red-800 mb-1">
             <Gift className="w-4 h-4 mr-1" />
             <h3 className="text-xs font-semibold">Referral Program</h3>
@@ -206,7 +206,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
           <button className="w-full bg-red-600 text-white text-xs py-1 px-2 rounded-lg font-medium hover:bg-red-700">
             Invite Friends
           </button>
-        </div>
+        </div> */}
         
         <div className="mt-auto space-y-1 text-xs">
           <NavLink 

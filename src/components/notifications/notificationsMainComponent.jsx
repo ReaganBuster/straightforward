@@ -19,7 +19,7 @@ const NotificationsMainComponent = ({ user }) => {
   
   // For demonstration purposes - simulate fetching notifications
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.user_id) return;
     
     setLoading(true);
     
@@ -28,7 +28,7 @@ const NotificationsMainComponent = ({ user }) => {
       const mockNotifications = [
         {
           notification_id: '1',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Your post received 50 new views',
           notification_type: 'post_view',
           reference_id: 'post-123',
@@ -41,7 +41,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '2',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Sarah liked your post about mobile payments',
           notification_type: 'post_like',
           reference_id: 'post-456',
@@ -54,7 +54,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '3',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'You received a new message from John',
           notification_type: 'new_message',
           reference_id: 'message-789',
@@ -67,7 +67,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '4',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Your content was unlocked by a user for 5,000 UGX',
           notification_type: 'content_unlock',
           reference_id: 'unlock-246',
@@ -80,7 +80,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '5',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'New subscriber: Michael paid 15,000 UGX for monthly access',
           notification_type: 'new_subscription',
           reference_id: 'sub-357',
@@ -93,7 +93,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '6',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Your post is trending in Finance category',
           notification_type: 'trending_post',
           reference_id: 'post-789',
@@ -198,7 +198,7 @@ const NotificationsMainComponent = ({ user }) => {
       const mockMoreNotifications = [
         {
           notification_id: '7',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Your DM access was purchased by Emily for 2,000 UGX',
           notification_type: 'dm_access',
           reference_id: 'dm-123',
@@ -211,7 +211,7 @@ const NotificationsMainComponent = ({ user }) => {
         },
         {
           notification_id: '8',
-          user_id: user.id,
+          user_id: user.user_id,
           content: 'Your withdrawal of 35,000 UGX has been processed',
           notification_type: 'withdrawal',
           reference_id: 'transaction-456',
@@ -276,7 +276,7 @@ const NotificationsMainComponent = ({ user }) => {
           <div className="flex items-center justify-between px-3 py-3">
             <h1 className="font-bold text-xl text-gray-900">Notifications</h1>
             <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden">
-              <img src="/api/placeholder/32/32" alt="Profile" className="w-full h-full object-cover" />
+              <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
             </div>
           </div>
           
@@ -294,18 +294,18 @@ const NotificationsMainComponent = ({ user }) => {
               >
                 Unread
               </button>
-              <button 
+              {/* <button 
                 className={`px-3 py-1.5 font-medium text-xs rounded-full ${activeTab === 'messages' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setActiveTab('messages')}
               >
                 Messages
-              </button>
-              <button 
+              </button> */}
+              {/* <button 
                 className={`px-3 py-1.5 font-medium text-xs rounded-full ${activeTab === 'payments' ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setActiveTab('payments')}
               >
                 Payments
-              </button>
+              </button> */}
             </div>
             
             <button 
@@ -318,11 +318,11 @@ const NotificationsMainComponent = ({ user }) => {
           </div>
         </div>
         
-        {loading && (
+        {/* {loading && (
           <div className="flex justify-center items-center p-4">
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-red-600"></div>
           </div>
-        )}
+        )} */}
         
         {!loading && filteredNotifications.length === 0 && (
           <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -402,6 +402,13 @@ const NotificationsMainComponent = ({ user }) => {
             </div>
           ))}
         </div>
+
+        {loading && (
+          <div className="flex justify-center items-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-red-600"></div>
+          </div>
+        )}
+        
         
         {!loading && filteredNotifications.length > 0 && hasMore && (
           <div className="p-3 flex justify-center">

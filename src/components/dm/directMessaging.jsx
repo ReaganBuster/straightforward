@@ -35,7 +35,7 @@ export default function Messages({ user, onlineUsers }) {
     loadMoreMessages, 
     sendMessage, 
     initializeConversation,
-  } = useConversationMessages(user.id, recipientId, user.id);
+  } = useConversationMessages(user.user_id, recipientId, user.user_id);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -43,7 +43,7 @@ export default function Messages({ user, onlineUsers }) {
   const previousScrollHeight = useRef(0);
 
   useEffect(() => {
-    if (!recipientId || !user.id) {
+    if (!recipientId || !user.user_id) {
       navigate('/feed', { replace: true });
       return;
     }
@@ -51,7 +51,7 @@ export default function Messages({ user, onlineUsers }) {
       await initializeConversation();
     };
     ensureConversation();
-  }, [recipientId, user.id, initializeConversation, navigate]);
+  }, [recipientId, user.user_id, initializeConversation, navigate]);
 
   useEffect(() => {
     if (!isLoadingMore && shouldScrollToBottom && messagesContainerRef.current) {
@@ -258,19 +258,19 @@ export default function Messages({ user, onlineUsers }) {
           {showMoreMenu && (
             <div className="absolute top-12 right-0 w-40 bg-white border border-red-100 rounded-xl shadow-xl z-40 overflow-hidden">
               {[
-                { id: 'dm', label: 'Messages' },
-                { id: 'files', label: 'Files' },
-                { id: 'links', label: 'Links' }
+                { user_id: 'dm', label: 'Messages' },
+                { user_id: 'files', label: 'Files' },
+                { user_id: 'links', label: 'Links' }
               ].map((tab) => (
                 <button
-                  key={tab.id}
+                  key={tab.user_id}
                   className={`w-full text-left px-4 py-3 text-sm ${
-                    activeTab === tab.id
+                    activeTab === tab.user_id
                       ? 'text-red-600 bg-red-50'
                       : 'text-gray-600 hover:bg-red-50 hover:text-red-500'
                   } transition-all duration-200 border-b border-red-50 last:border-b-0`}
                   onClick={() => {
-                    setActiveTab(tab.id);
+                    setActiveTab(tab.user_id);
                     setShowMoreMenu(false);
                   }}
                 >

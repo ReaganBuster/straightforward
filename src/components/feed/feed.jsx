@@ -24,7 +24,7 @@ const SocialFeed = ({ user }) => {
     addView,
     unlockContent,
     addPost
-  } = useFeedPosts(user?.id, activeTab);
+  } = useFeedPosts(user?.user_id, activeTab);
 
   const handleTabChange = (tab) => setActiveTab(tab);
   const handlePostCreated = (newPost) => addPost(newPost);

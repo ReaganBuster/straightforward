@@ -15,7 +15,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  const { userRatings, rateItem, isLoading: isRatingLoading } = usePostRatings(user?.id);
+  const { userRatings, rateItem, isLoading: isRatingLoading } = usePostRatings(user?.user_id);
 
   useEffect(() => {
     setIsLiked(post.is_liked || false);
