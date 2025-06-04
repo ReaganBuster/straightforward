@@ -274,7 +274,7 @@ const NotificationsMainComponent = ({ user }) => {
         {/* Top Navigation - Sticky */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
           <div className="flex items-center justify-between px-3 py-3">
-            <h1 className="font-bold text-xl text-gray-900">NotificationsMainComponent</h1>
+            <h1 className="font-bold text-xl text-gray-900">Notifications</h1>
             <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden">
               <img src="/api/placeholder/32/32" alt="Profile" className="w-full h-full object-cover" />
             </div>

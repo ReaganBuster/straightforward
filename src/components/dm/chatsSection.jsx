@@ -88,10 +88,10 @@ const Chats = ({ conversations, loading }) => {
               )}
             </div> */}
             <div>
-              <h1 className="text-red-600 font-semibold text-lg">Chats</h1>
-              <p className="text-gray-500 text-xs">
+              <h1 className="font-bold text-xl text-gray-900">Chats</h1>
+              <button className="px-3 py-1.5 font-medium text-xs rounded-full bg-red-50 text-red-600">
                 {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
-              </p>
+              </button>
             </div>
           </div>
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition">
