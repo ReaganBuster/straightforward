@@ -585,7 +585,7 @@ export const useConversationMessages = (initiatorId, recipientId, userId) => {
                 content: newMessage.message,
                 created_at: newMessage.created_at,
                 is_read: newMessage.is_read,
-                content_type: 'text',
+                message_type: 'text',
                 reply_to_message_id: newMessage.reply_to_message_id,
                 is_current_user: newMessage.from_user_id === userId,
                 conversation_id: newMessage.conversation_id,

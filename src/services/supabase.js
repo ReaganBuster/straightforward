@@ -652,7 +652,7 @@ export const startConversation = async (initiatorId, recipientId, ratePerMsg = 0
 };
 
 // Send a message
-export const sendMessage = async (initiatorId, recipientId, senderId, content, replyToMessageId = null, ratePerMsg = 0) => {
+export const sendMessage = async (initiatorId, recipientId, senderId, content, isRead, messageType, replyToMessageId = null, ratePerMsg = 0) => {
   try {
     // Get or create the conversation
     const { conversation_id: conversationId, rate_per_msg: ratePerMsgFromDb } = await startConversation(initiatorId, recipientId, ratePerMsg);
@@ -668,6 +668,8 @@ export const sendMessage = async (initiatorId, recipientId, senderId, content, r
         from_user_id: senderId,
         to_user_id: recipientId,
         message: content,
+        is_read: isRead,
+        message_type: messageType, // Ensure messageType is defined in the context
         reply_to_message_id: replyToMessageId,
       })
       .select()
@@ -713,7 +715,7 @@ export const getConversationMessages = async (initiatorId, recipientId, userId, 
         message,
         created_at,
         is_read,
-        content_type,
+        message_type,
         reply_to_message_id,
         conversation_id
       `)
@@ -729,7 +731,7 @@ export const getConversationMessages = async (initiatorId, recipientId, userId, 
       content: msg.message,
       created_at: msg.created_at,
       is_read: msg.is_read,
-      content_type: msg.content_type,
+      message_type: msg.message_type,
       reply_to_message_id: msg.reply_to_message_id,
       is_current_user: msg.from_user_id === userId,
       conversation_id: conversationId, // Optionally include for reference
