@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary.jsx';
+import App from './presentation/pages/App.jsx';
+import ErrorBoundary from '../src/presentation/components/ErrorBoundary/ErrorBoundary.jsx';
 import { RecoilRoot } from 'recoil';
 import './index.css';
 

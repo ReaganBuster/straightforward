@@ -1,0 +1,44 @@
+{
+  "name": "Straight Forward",
+  "short_name": "StraightFWD",
+  "description": "Straight Forward is a bold, modern dating platform blending the best of Twitter and Instagram—no noise, just connections.",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/feed",
+  "scope": "/",
+  "theme_color": "#e53935",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "en-US",
+  "categories": ["dating", "social", "lifestyle", "communication"],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "url": "/feed",
+      "icons": [{ "src": "/icons/feed.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Messages",
+      "url": "/chat",
+      "icons": [{ "src": "/icons/chat.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Profile",
+      "url": "/profile",
+      "icons": [{ "src": "/icons/profile.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ]
+}

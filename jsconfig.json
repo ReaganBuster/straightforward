@@ -1,0 +1,15 @@
+// jsconfig.json (at your project root, alongside package.json)
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@application/*": ["application/*"],
+      "@domain/*": ["domain/*"],
+      "@infrastructure/*": ["infrastructure/*"],
+      "@presentation/*": ["presentation/*"],
+      "@shared/*": ["shared/*"]
+    },
+    "jsx": "react-jsx"
+  },
+  "include": ["src"]
+}
