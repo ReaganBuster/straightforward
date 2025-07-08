@@ -9,9 +9,13 @@ import {
   Star,
   Activity,
   Zap,
+  X, // Import the X icon for the close button
+  ZoomIn, // Optionally for a zoom hint
+  ZoomOut, // Optionally for a zoom hint
 } from 'lucide-react';
 import { usePostRatings } from '@presentation/hooks/useOtherHooks';
 import RatingStars from '@presentation/components/RatingComponent/RatingComponent';
+import MediaOverlay from '../MediaOverlay/MediaOverlay';
 
 // Memoized to prevent unnecessary re-renders for large feeds
 const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
@@ -21,6 +25,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const [isBookmarked, setIsBookmarked] = useState(post.is_bookmarked || false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showMediaOverlay, setShowMediaOverlay] = useState(false); // New state for media overlay
 
   const {
     userRatings,
@@ -46,6 +51,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   };
 
   const handlePostClick = () => {
+    // This function handles clicking the general post area to navigate
     addView(post.post_id);
     const author = post.author || {};
     navigate(`/m/${author.user_id}`, {
@@ -57,6 +63,17 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
         rate: post.dm_fee || 0,
       },
     });
+  };
+
+  // New handler for clicking specifically on the media
+  const handleMediaClick = e => {
+    e.stopPropagation(); // Prevent the parent handlePostClick from triggering
+    setShowMediaOverlay(true);
+    addView(post.post_id); // Add view when media is opened
+  };
+
+  const handleCloseMediaOverlay = () => {
+    setShowMediaOverlay(false);
   };
 
   const handleRatePost = async score => {
@@ -175,7 +192,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
         <div className="ml-12 -mt-1">
           {/* Text content comes first */}
           <p className="text-gray-900">{post.caption}</p>
-          
+
           {/* Topics section */}
           {topics && topics.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -190,9 +207,12 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
             </div>
           )}
 
-          {/* Image comes after text - no zoom effect */}
+          {/* Image comes after text - now with click handler for overlay */}
           {post.thumbnail_url && (
-            <div className="mt-2 rounded-xl overflow-hidden">
+            <div
+              className="mt-2 rounded-xl overflow-hidden cursor-pointer" // Added cursor-pointer
+              onClick={handleMediaClick} // Click opens overlay
+            >
               <img
                 src={post.thumbnail_url || 'https://via.placeholder.com/600/400'}
                 alt="Post thumbnail"
@@ -259,7 +279,6 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
         </button>
       </div>
 
-
       {showRatingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -271,19 +290,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowRatingModal(false)}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                  </svg>
+                <X className="w-5 h-5" /> {/* Using Lucide icon for close */}
               </button>
             </div>
             <RatingStars
@@ -305,6 +312,13 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Media Overlay Component */}
+      {showMediaOverlay && (
+        <MediaOverlay showMediaOverlay={showMediaOverlay} post={post} authorInfo={authorInfo} handleCloseMediaOverlay={handleCloseMediaOverlay}/>
+        
+         
       )}
     </div>
   );
