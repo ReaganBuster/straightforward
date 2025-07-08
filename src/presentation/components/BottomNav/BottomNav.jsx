@@ -33,13 +33,13 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
       badge: unreadMessages > 0 ? unreadMessages : null,
       type: 'link',
     },
-    {
-      to: '/notifications',
-      icon: <Bell size={24} />,
-      label: 'Notifications',
-      badge: unreadNotifications > 0 ? unreadNotifications : null,
-      type: 'link',
-    },
+    // {
+    //   to: '/notifications',
+    //   icon: <Bell size={24} />,
+    //   label: 'Notifications',
+    //   badge: unreadNotifications > 0 ? unreadNotifications : null,
+    //   type: 'link',
+    // },
     {
       // This is your new rounded, unlabeled "Add Post" button
       icon: <Plus size={28} />, // Increased size for better visibility without label
