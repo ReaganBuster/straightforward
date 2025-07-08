@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   Home,
-  MessageSquare,
+  MessageCircle,
   Bell,
   Plus,
 } from 'lucide-react';
@@ -28,7 +28,7 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     },
     {
       to: '/chat',
-      icon: <MessageSquare size={24} />,
+      icon: <MessageCircle size={24} />,
       label: 'Messages',
       badge: unreadMessages > 0 ? unreadMessages : null,
       type: 'link',

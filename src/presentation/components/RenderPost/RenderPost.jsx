@@ -5,7 +5,7 @@ import {
   Bookmark,
   Share2,
   MoreHorizontal,
-  Mail,
+  MessageCircle,
   Star,
   Activity,
   Zap,
@@ -275,7 +275,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
           className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
           onClick={handleDirectMessage}
         >
-          <Mail size={14} className="mr-1" />
+          <MessageCircle size={14} className="mr-1" />
         </button>
       </div>
 
