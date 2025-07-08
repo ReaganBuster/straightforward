@@ -22,24 +22,12 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
       label: 'Messages',
       badge: unreadMessages > 0 ? unreadMessages : null,
     },
-    // {
-    //   to: '/notifications',
-    //   icon: <Bell size={24} />,
-    //   label: 'Notifications',
-    //   badge: unreadNotifications > 0 ? unreadNotifications : null,
-    // },
-    // {
-    //   to: '/transactions',
-    //   icon: <Wallet size={24} />,
-    //   label: 'Wallet',
-    //   badge: null,
-    // },
-    // {
-    //   to: '/profile',
-    //   icon: <User size={24} />,
-    //   label: 'Profile',
-    //   badge: null
-    // }
+    {
+      to: '/notifications',
+      icon: <Bell size={24} />,
+      label: 'Notifications',
+      badge: unreadNotifications > 0 ? unreadNotifications : null,
+    },
   ];
 
   return (
