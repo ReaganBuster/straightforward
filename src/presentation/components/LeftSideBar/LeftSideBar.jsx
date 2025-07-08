@@ -119,9 +119,12 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
         `}
       >
         <div className="flex items-center justify-between mb-6">
-          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-lg font-bold py-2 px-3 rounded-lg">
-            Kontent Market
-          </div>
+          
+            <img
+              src="/favicon.svg" // Path to your favicon.ico file
+              alt="StraightFWD"
+              className="h-24 w-24" // Adjusted size: h-7 w-7 gives 28x28px
+            />
           <button
             className="md:hidden text-gray-600 hover:text-gray-800"
             onClick={toggleSidebar}

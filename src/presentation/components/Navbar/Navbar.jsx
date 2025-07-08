@@ -35,7 +35,7 @@ const MobileNavBar = ({ user, toggleSidebar }) => {
       </div>
       <div className="order-2 mx-auto">
         <img
-          src={Favicon}
+          src="/favicon.ico"
           alt="App Icon"
           className="w-10 h-10 cursor-pointer"
           onClick={toggleSidebar}
