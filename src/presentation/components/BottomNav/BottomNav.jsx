@@ -3,7 +3,7 @@ import {
   Home,
   MessageSquare,
   Bell,
-  PlusCircle, // Make sure PlusCircle is imported
+  Plus, // Changed to Plus for a simpler icon, often used in rounded FABs
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -18,7 +18,6 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     setIsFormOverlayVisible(false);
   };
 
-  // Define your navigation items, now with "Add Post" as the last item
   const navItems = [
     {
       to: '/',
@@ -42,11 +41,11 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
       type: 'link',
     },
     {
-      // This is now your last item, the "Add Post" button
-      icon: <PlusCircle size={24} />,
-      label: 'Post',
+      // This is your new rounded, unlabeled "Add Post" button
+      icon: <Plus size={28} />, // Increased size for better visibility without label
+      label: 'Post', // Label kept for key, but not rendered
       action: handleFabClick,
-      type: 'button', // Still marked as a button type
+      type: 'button',
     },
   ];
 
@@ -82,17 +81,16 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
                 <span className="text-xs mt-0.5">{item.label}</span>
               </NavLink>
             ) : (
-              // Render a regular button for the "Add Post" action, with red styling
+              // Render the rounded red button for "Add Post"
               <button
                 key={item.label}
                 onClick={item.action}
-                className="flex flex-col items-center justify-center flex-1 py-1 transition-transform duration-200 hover:scale-105 focus:outline-none
-                           bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg mx-1" // Applied red gradient directly
+                className="flex items-center justify-center h-10 w-10 // Added fixed size for a perfect circle
+                           bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full shadow-lg // Changed to rounded-full
+                           transition-transform duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
               >
-                <div className="relative">
-                  {item.icon}
-                </div>
-                <span className="text-xs mt-0.5">{item.label}</span>
+                {/* Only the icon is rendered, no label */}
+                {item.icon}
               </button>
             )
           ))}
@@ -104,7 +102,7 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
           <div className="bg-white p-6 rounded-lg shadow-lg relative mx-4 max-w-lg w-full">
             <h2 className="text-2xl font-bold mb-4 text-gray-800">Create New Post</h2>
-            {/* This is where your actual post creation form component will go */}
+            {/* Your actual post creation form component will go here */}
             <p className="text-gray-700 mb-4">Your form for adding a new post goes here. You can connect it to your existing form setup.</p>
             <textarea
               className="w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
