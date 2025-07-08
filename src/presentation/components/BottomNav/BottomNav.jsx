@@ -3,33 +3,12 @@ import {
   Home,
   MessageSquare,
   Bell,
-  PlusCircle, // Import PlusCircle for the add button
+  PlusCircle, // Make sure PlusCircle is imported
 } from 'lucide-react';
-import React, { useState } from 'react'; // Import React and useState
+import React, { useState } from 'react';
 
 const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
-  const [isFormOverlayVisible, setIsFormOverlayVisible] = useState(false); // State to control form overlay visibility
-
-  const navItems = [
-    {
-      to: '/',
-      icon: <Home size={24} />,
-      label: 'Home',
-      badge: null,
-    },
-    {
-      to: '/chat',
-      icon: <MessageSquare size={24} />,
-      label: 'Messages',
-      badge: unreadMessages > 0 ? unreadMessages : null,
-    },
-    {
-      to: '/notifications',
-      icon: <Bell size={24} />,
-      label: 'Notifications',
-      badge: unreadNotifications > 0 ? unreadNotifications : null,
-    },
-  ];
+  const [isFormOverlayVisible, setIsFormOverlayVisible] = useState(false);
 
   const handleFabClick = () => {
     setIsFormOverlayVisible(true);
@@ -39,47 +18,83 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     setIsFormOverlayVisible(false);
   };
 
+  // Define your navigation items, now including the "Add Post" button
+  const navItems = [
+    {
+      to: '/',
+      icon: <Home size={24} />,
+      label: 'Home',
+      badge: null,
+      type: 'link', // Added a 'type' property to distinguish
+    },
+    {
+      to: '/chat',
+      icon: <MessageSquare size={24} />,
+      label: 'Messages',
+      badge: unreadMessages > 0 ? unreadMessages : null,
+      type: 'link',
+    },
+    {
+      // This will be your "Add Post" button
+      icon: <PlusCircle size={24} />,
+      label: 'Post', // Label for the button
+      action: handleFabClick, // The function to call on click
+      type: 'button', // Mark this as a button type
+    },
+    {
+      to: '/notifications',
+      icon: <Bell size={24} />,
+      label: 'Notifications',
+      badge: unreadNotifications > 0 ? unreadNotifications : null,
+      type: 'link',
+    },
+  ];
+
   return (
     <>
       <nav
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 h-14 flex md:hidden z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
       >
-        <div className="flex w-full justify-around items-center relative">
+        <div className="flex w-full justify-around items-center">
           {navItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 transition-transform duration-200 hover:scale-105 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg mx-1'
-                    : 'text-gray-600'
-                }`
-              }
-            >
-              <div className="relative">
-                {item.icon}
-                {item.badge !== null && (
-                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs mt-0.5">{item.label}</span>
-            </NavLink>
+            item.type === 'link' ? (
+              // Render NavLink for regular navigation items
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center flex-1 py-1 transition-transform duration-200 hover:scale-105 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg mx-1'
+                      : 'text-gray-600'
+                  }`
+                }
+              >
+                <div className="relative">
+                  {item.icon}
+                  {item.badge !== null && (
+                    <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs mt-0.5">{item.label}</span>
+              </NavLink>
+            ) : (
+              // Render a regular button for the "Add Post" action
+              <button
+                key={item.label} // Use label as key for the button
+                onClick={item.action}
+                className="flex flex-col items-center justify-center flex-1 py-1 text-gray-600 transition-transform duration-200 hover:scale-105 focus:outline-none"
+              >
+                <div className="relative">
+                  {item.icon}
+                </div>
+                <span className="text-xs mt-0.5">{item.label}</span>
+              </button>
+            )
           ))}
-
-          {/* Floating Action Button - Adjusted Position */}
-          <div className="absolute right-4 -top-6"> {/* Changed positioning to right-4 */}
-            <button
-              onClick={handleFabClick}
-              className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-              aria-label="Add New Post"
-            >
-              <PlusCircle size={28} />
-            </button>
-          </div>
         </div>
       </nav>
 
