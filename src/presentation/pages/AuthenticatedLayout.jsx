@@ -51,7 +51,7 @@ const AuthenticatedLayout = ({ user }) => {
         </main>
         {!isDesktop && showBottomNav && (
           <div className="transition-opacity duration-300">
-            <BottomNav />
+            <BottomNav user={user}/>
           </div>
         )}
       </div>

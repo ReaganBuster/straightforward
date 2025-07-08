@@ -6,8 +6,9 @@ import {
   Plus,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import NewPost from '@presentation/components/NewPost/NewPost';
 
-const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
+const BottomNav = ({ user, unreadMessages = 3, unreadNotifications = 5 }) => {
   const [isFormOverlayVisible, setIsFormOverlayVisible] = useState(false);
 
   const handleFabClick = () => {
@@ -15,6 +16,10 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
   };
 
   const handleCloseFormOverlay = () => {
+    setIsFormOverlayVisible(false);
+  };
+
+   const handlePostCreated = () => {
     setIsFormOverlayVisible(false);
   };
 
@@ -100,38 +105,13 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
       {/* Post Form Overlay */}
       {isFormOverlayVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative mx-4 max-w-lg w-full">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">Create New Post</h2>
-            <p className="text-gray-700 mb-4">Your form for adding a new post goes here. You can connect it to your existing form setup.</p>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
-              rows="4"
-              placeholder="What's on your mind?"
-            ></textarea>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleCloseFormOverlay}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              >
-                Post
-              </button>
+          <div className="p-3 overflow-y-auto max-h-[80vh]">
+              <NewPost
+                user={user}
+                onPostCreated={handlePostCreated}
+                onClose={() => handleCloseFormOverlay}
+              />
             </div>
-
-            <button
-              onClick={handleCloseFormOverlay}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-              aria-label="Close form"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
         </div>
       )}
     </>
