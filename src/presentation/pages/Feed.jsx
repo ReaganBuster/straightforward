@@ -9,7 +9,8 @@ const Feed = ({ user }) => {
   const [activeTab, setActiveTab] = useState('discover');
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isMobile] = useState(window.innerWidth <= 1024);
+  // No need for isMobile state if using responsive classes directly
+  // const [isMobile] = useState(window.innerWidth <= 1024);
   const mainContentRef = useRef(null);
   const rightSidebarRef = useRef(null);
   const lastScrollTop = useRef(0);
@@ -57,13 +58,20 @@ const Feed = ({ user }) => {
     const currentScrollTop = scrollEl.scrollTop;
     const delta = currentScrollTop - lastScrollTop.current;
 
+    // Only consider significant scroll changes to avoid flickering
     if (Math.abs(delta) < 5) return;
 
-    if (delta > 0 && isMobileNavVisible) {
-      setIsMobileNavVisible(false);
-    } else if (delta < 0 && !isMobileNavVisible) {
-      setIsMobileNavVisible(true);
+    // Only toggle if not on a larger screen (where mobile nav might not be relevant)
+    // You might want to check window.innerWidth here if isMobile is no longer state
+    // For now, assuming this nav is truly mobile-only based on usage
+    if (window.innerWidth <= 1024) { // Re-evaluate based on where MobileNavBar hides
+      if (delta > 0 && isMobileNavVisible) {
+        setIsMobileNavVisible(false);
+      } else if (delta < 0 && !isMobileNavVisible) {
+        setIsMobileNavVisible(true);
+      }
     }
+
 
     lastScrollTop.current = currentScrollTop;
   }, [isMobileNavVisible]);
@@ -80,31 +88,53 @@ const Feed = ({ user }) => {
     return () => scrollEl.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
+  // This useEffect seems intended to prevent scroll propagation on multiple scrollable elements.
+  // While generally not the cause of "cramping" directly, it's good practice.
   useEffect(() => {
     const handleStopPropagation = e => e.stopPropagation();
 
     const mainContent = mainContentRef.current;
     const rightSidebar = rightSidebarRef.current;
 
-    mainContent?.addEventListener('scroll', handleStopPropagation);
-    rightSidebar?.addEventListener('scroll', handleStopPropagation);
+    // Check if elements exist before adding listeners
+    if (mainContent) {
+      mainContent.addEventListener('scroll', handleStopPropagation);
+    }
+    if (rightSidebar) {
+      rightSidebar.addEventListener('scroll', handleStopPropagation);
+    }
+
 
     return () => {
-      mainContent?.removeEventListener('scroll', handleStopPropagation);
-      rightSidebar?.removeEventListener('scroll', handleStopPropagation);
+      if (mainContent) {
+        mainContent.removeEventListener('scroll', handleStopPropagation);
+      }
+      if (rightSidebar) {
+        rightSidebar.removeEventListener('scroll', handleStopPropagation);
+      }
     };
-  }, []);
+  }, []); // Depend on nothing to run once, or include refs if they can change
 
   return (
+    // This top-level div for Feed assumes it's placed inside a parent layout
+    // that manages the Left Sidebar (if any) and provides the remaining space.
     <div className="flex min-h-screen bg-gray-50">
-      {/* Main Feed */}
+      {/* Main Feed Content Area */}
       <div
         ref={mainContentRef}
-        className="w-full md:w-[calc(100%-20rem)] border-l border-r border-gray-200 bg-white overflow-y-auto min-h-screen pb-[60px] md:pb-0 shadow-sm"
+        // Default w-full for small screens.
+        // md:w-full for tablets (RightSidebar is hidden on md).
+        // lg:w-[calc(100%-20rem)] for larger desktops (RightSidebar is visible on lg).
+        className="w-full md:w-full lg:w-[calc(100%-20rem)] border-l border-r border-gray-200 bg-white overflow-y-auto min-h-screen pb-[60px] md:pb-0 shadow-sm"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 60px)' }}
       >
         {/* Mobile NavBar with scroll-based visibility */}
-        {isMobile && (
+        {/* The condition for 'isMobile' should align with the breakpoint where MobileNavBar is intended to be visible.
+            Since you mentioned it's a mobile nav, a simple check of window.innerWidth might be enough if md:hidden is on the nav.
+            If MobileNavBar itself uses md:hidden, then this `isMobile` state becomes less critical for visibility here.
+            For now, let's keep it if MobileNavBar is *always* rendered and its own styles hide it.
+        */}
+        {window.innerWidth <= 1024 && ( // Replaced `isMobile` state with direct window.innerWidth check
           <div
             className={`sticky top-0 z-20 transition-transform duration-300 ease-in-out ${isMobileNavVisible ? 'translate-y-0' : '-translate-y-full'}`}
           >
@@ -150,7 +180,8 @@ const Feed = ({ user }) => {
           </div>
         </div>
 
-        {/* Create Post - Desktop Only */}
+        {/* Create Post - Desktop Only (re-evaluate this with mobile post button in BottomNav) */}
+        {/* If the mobile FAB is used, this desktop-only create post might be redundant or styled differently */}
         <div className="hidden md:block">
           <CreatePost user={user} onPostCreated={handlePostCreated} />
         </div>
@@ -197,8 +228,11 @@ const Feed = ({ user }) => {
         )}
       </div>
 
-      {/* Right Sidebar */}
-      <RightSidebar rightSidebarRef={rightSidebarRef} user={user} />
+      {/* Right Sidebar - Adjusted Visibility and fixed width */}
+      {/* Hidden on screens smaller than lg (including md/tablet), block on lg and up */}
+      <div className="hidden lg:block w-[20rem] flex-shrink-0">
+        <RightSidebar rightSidebarRef={rightSidebarRef} user={user} />
+      </div>
     </div>
   );
 };
