@@ -18,14 +18,14 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     setIsFormOverlayVisible(false);
   };
 
-  // Define your navigation items, now including the "Add Post" button
+  // Define your navigation items, now with "Add Post" as the last item
   const navItems = [
     {
       to: '/',
       icon: <Home size={24} />,
       label: 'Home',
       badge: null,
-      type: 'link', // Added a 'type' property to distinguish
+      type: 'link',
     },
     {
       to: '/chat',
@@ -35,18 +35,18 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
       type: 'link',
     },
     {
-      // This will be your "Add Post" button
-      icon: <PlusCircle size={24} />,
-      label: 'Post', // Label for the button
-      action: handleFabClick, // The function to call on click
-      type: 'button', // Mark this as a button type
-    },
-    {
       to: '/notifications',
       icon: <Bell size={24} />,
       label: 'Notifications',
       badge: unreadNotifications > 0 ? unreadNotifications : null,
       type: 'link',
+    },
+    {
+      // This is now your last item, the "Add Post" button
+      icon: <PlusCircle size={24} />,
+      label: 'Post',
+      action: handleFabClick,
+      type: 'button', // Still marked as a button type
     },
   ];
 
@@ -82,11 +82,12 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
                 <span className="text-xs mt-0.5">{item.label}</span>
               </NavLink>
             ) : (
-              // Render a regular button for the "Add Post" action
+              // Render a regular button for the "Add Post" action, with red styling
               <button
-                key={item.label} // Use label as key for the button
+                key={item.label}
                 onClick={item.action}
-                className="flex flex-col items-center justify-center flex-1 py-1 text-gray-600 transition-transform duration-200 hover:scale-105 focus:outline-none"
+                className="flex flex-col items-center justify-center flex-1 py-1 transition-transform duration-200 hover:scale-105 focus:outline-none
+                           bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg mx-1" // Applied red gradient directly
               >
                 <div className="relative">
                   {item.icon}
