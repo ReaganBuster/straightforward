@@ -42,7 +42,7 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
     },
     {
       icon: <Plus size={28} />,
-      label: 'Post',
+      label: 'Post', // Label kept for key/internal reference, not rendered
       action: handleFabClick,
       type: 'button',
     },
@@ -61,10 +61,9 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
               <NavLink
                 key={item.to}
                 to={item.to}
-                // Updated className to change text color instead of background
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center flex-1 py-1 transition-colors duration-200 hover:text-red-600 ${ // Changed transition to colors
-                    isActive ? 'text-red-600' : 'text-gray-600' // Apply red text color when active
+                  `flex flex-col items-center justify-center flex-1 py-1 transition-colors duration-200 hover:text-red-600 ${
+                    isActive ? 'text-red-600' : 'text-gray-600'
                   }`
                 }
               >
@@ -79,16 +78,20 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
                 <span className="text-xs mt-0.5">{item.label}</span>
               </NavLink>
             ) : (
-              // Render the rounded red button for "Add Post"
-              <button
-                key={item.label}
-                onClick={item.action}
-                className="flex items-center justify-center h-10 w-10
-                           bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full shadow-lg
-                           transition-transform duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+              // Render the rounded red button, now wrapped for alignment
+              <div
+                key={item.label} // Key applies to the outer wrapper now
+                className="flex flex-col items-center justify-center flex-1 py-1" // These classes ensure it aligns like other NavLinks
               >
-                {item.icon}
-              </button>
+                <button
+                  onClick={item.action}
+                  className="flex items-center justify-center h-10 w-10
+                             bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full shadow-lg
+                             transition-transform duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                >
+                  {item.icon}
+                </button>
+              </div>
             )
           ))}
         </div>
