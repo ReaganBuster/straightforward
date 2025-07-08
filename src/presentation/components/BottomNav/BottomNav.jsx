@@ -7,25 +7,6 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react'; // Import React and useState
 
-// Assume your PostForm component is defined elsewhere, e.g., in './PostForm'
-// const PostForm = ({ onClose }) => {
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-//       <div className="bg-white p-6 rounded-lg shadow-lg relative">
-//         <h2 className="text-xl font-bold mb-4">Create New Post</h2>
-//         {/* Your form content goes here */}
-//         <p>This is where your post creation form will be.</p>
-//         <button
-//           onClick={onClose}
-//           className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
-//         >
-//           &times;
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
 const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
   const [isFormOverlayVisible, setIsFormOverlayVisible] = useState(false); // State to control form overlay visibility
 
@@ -89,8 +70,8 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
             </NavLink>
           ))}
 
-          {/* Floating Action Button */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 -top-6">
+          {/* Floating Action Button - Adjusted Position */}
+          <div className="absolute right-4 -top-6"> {/* Changed positioning to right-4 */}
             <button
               onClick={handleFabClick}
               className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
@@ -108,7 +89,6 @@ const BottomNav = ({ unreadMessages = 3, unreadNotifications = 5 }) => {
           <div className="bg-white p-6 rounded-lg shadow-lg relative mx-4 max-w-lg w-full">
             <h2 className="text-2xl font-bold mb-4 text-gray-800">Create New Post</h2>
             {/* This is where your actual post creation form component will go */}
-            {/* For now, it's just a placeholder. Replace with your <PostForm /> component */}
             <p className="text-gray-700 mb-4">Your form for adding a new post goes here. You can connect it to your existing form setup.</p>
             <textarea
               className="w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
