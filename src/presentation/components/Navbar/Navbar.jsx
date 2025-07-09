@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MoreVertical } from 'lucide-react';
 import { useProfile } from '@presentation/hooks/useProfile';
 import Favicon from '../../../assets/favicon.svg';
+import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 const MobileNavBar = ({ user, toggleSidebar }) => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const MobileNavBar = ({ user, toggleSidebar }) => {
         onClick={() => navigate('/profile')}
       >
         <img
-          src={profile?.avatar_url}
+          src={profile?.avatar_url || PLACEHOLDER_PICTURE}
           alt="Profile"
           className="w-full h-full object-cover"
         />
