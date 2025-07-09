@@ -141,7 +141,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
               <h3 className="font-bold text-gray-900 mr-1">
                 {authorInfo.name || authorInfo.username}
               </h3>
-              {authorInfo.is_verified && (
+              {/* {authorInfo.is_verified && (
                 <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
                   <svg
                     className="w-3 h-3 text-white fill-current"
@@ -150,7 +150,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                   </svg>
                 </div>
-              )}
+              )} */}
               <span className="text-gray-500 text-sm ml-1">
                 @{authorInfo.username}
               </span>
@@ -163,7 +163,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
               </span>
             </div>
             <div className="flex items-center mt-0.5 flex-wrap gap-1">
-              {authorInfo.expertise && (
+              {authorInfo.is_verified && (
                 // <span className={`text-xs px-2 py-0.5 rounded-full ${
                 //   // 'pending' ? 'bg-purple-100 text-purple-800' : 
                 //   'verified' ? 'bg-green-100 text-green-800' : 
@@ -173,11 +173,12 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
                 //   verified
                 // </span>
                 <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                  'verified' ? 'bg-green-100 text-green-800' : 
+                  authorInfo.is_verified === 'Unverified' ? 'bg-purple-100 text-purple-800' : 
+                  authorInfo.is_verified === 'Verified' ? 'bg-green-100 text-green-800' : 
                   'bg-red-100 text-red-800'
                 }`}>
                   <Verified size={12} />
-                  verified
+                  {authorInfo.is_verified}
                 </span>
               )}
              

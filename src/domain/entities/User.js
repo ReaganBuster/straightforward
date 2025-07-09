@@ -6,16 +6,16 @@ class User {
         username,
         name,
         email,
-        password, // Password hash (should be hashed, not plain text)
+        password,
         gender = null,
         sexual_orientation = null,
         avatar_url = null,
         bio = null,
         born = null,
-        location = null, // General location/city
-        address = null, // Optional: more specific address
-        contact = null, // Phone or other contact info
-        interests = [], // Array of interests/hobbies
+        location = null, 
+        address = null,
+        contact = null,
+        interests = [],
         created_at = new Date(),
         updated_at = new Date(),
         last_seen = new Date(),
