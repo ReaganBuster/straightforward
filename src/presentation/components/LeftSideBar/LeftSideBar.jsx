@@ -202,7 +202,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
           </NavLink>
         </nav>
 
-        <div className="p-2 bg-gray-50 rounded-lg mb-4">
+        {/* <div className="p-2 bg-gray-50 rounded-lg mb-4">
           <h3 className="text-xs font-semibold text-gray-700 mb-2">
             Quick Stats
           </h3>
@@ -224,7 +224,7 @@ const LeftSidebar = ({ user, isMobileOpen, toggleSidebar }) => {
               <span className="font-medium text-green-600">96%</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* <div className="p-2 bg-red-50 rounded-lg mb-4 border border-red-100">
           <div className="flex items-center text-red-800 mb-1">

@@ -276,6 +276,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
           onClick={handleDirectMessage}
         >
           <Mail size={14} className="mr-1" />
+          <span>Make you move</span>
         </button>
       </div>
 
