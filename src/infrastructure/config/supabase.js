@@ -339,17 +339,7 @@ export const getFeedPosts = async (
         `
         *,
         author:users(
-          user_id,
-          username,
-          name,
-          avatar_url,
-          is_verified,
-          expertise,
-          rate_per_msg,
-          response_rate,
-          avg_response_time,
-          rating,
-          currency
+          *
         )
       `
       )
@@ -451,17 +441,7 @@ export const getUserPosts = async (
         `
         *,
         author:users(
-          user_id, 
-          username, 
-          name, 
-          avatar_url, 
-          is_verified, 
-          expertise, 
-          rate_per_msg, 
-          response_rate, 
-          avg_response_time, 
-          rating,
-          currency
+         *
         )
       `,
         { count: 'exact' }
@@ -878,12 +858,7 @@ export const getTopEarningExperts = async (limit = 5) => {
         total_earnings,
         avg_rating,
         users:user_id (
-          username,
-          name,
-          avatar_url,
-          expertise,
-          rate_per_msg,
-          response_rate
+          *
         )
       `
       )
@@ -1607,11 +1582,7 @@ export const getUserSubscriptions = async userId => {
         end_date,
         is_active,
         creator:creator_user_id (
-          user_id,
-          username,
-          name,
-          avatar_url,
-          expertise
+          *
         ),
         tier:tier_id (
           tier_name,

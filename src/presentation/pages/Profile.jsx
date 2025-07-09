@@ -6,6 +6,8 @@ import {
   DollarSign,
   Gift,
   Star,
+  Plane,
+  Send,
 } from 'lucide-react';
 import { useFeedPosts } from '@presentation/hooks/useFeedPosts';
 import { userAtom } from '@shared/state/authAtom';
@@ -50,10 +52,24 @@ const Profile = ({ user }) => {
     changeContentType(activeTab);
   }, [activeTab, changeContentType]);
 
+  const handleDirectMessage = e => {
+    e.stopPropagation();
+    const author = post.author || {};
+    navigate(`/m/${author.user_id}`, {
+      state: {
+        recipientId: author.user_id,
+        recipientName: author.username,
+        rate: post.dm_fee || 0,
+      },
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50 w-full">
       <div className="flex-1 border-l border-r border-gray-200 bg-white">
         <div className="p-4">
+          
+          
           <div className="flex mb-4">
             <div className="w-20 h-20 rounded-full border-2 border-red-100 overflow-hidden mr-4">
               <img
@@ -79,13 +95,19 @@ const Profile = ({ user }) => {
                 <div className="flex space-x-4 mb-3 text-sm">
                   <div className="text-center">
                     <div className="font-semibold">
-                      {stats?.total_views || 0}
+                      {user?.profile_views || 0}
                     </div>
                     <div className="text-xs text-gray-500">Profile Views</div>
                   </div>
                   <div className="text-center">
                     <div className="font-semibold">{posts.length}</div>
                     <div className="text-xs text-gray-500">posts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold">
+                      {user?.connections.length || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Connections</div>
                   </div>
                   <div className="flex items-center text-yellow-600">
                     <Star size={14} className="mr-1" fill="currentColor" />
@@ -107,22 +129,74 @@ const Profile = ({ user }) => {
           </div>
           <div className="mb-4">
             {!profileLoading && user?.bio && typeof user.bio === 'string' ? (
-              <p className="text-sm mb-2 whitespace-pre-wrap">{user.bio}</p>
+              <p className="text-sm mb-3 whitespace-pre-wrap">{user.bio}</p>
             ) : null}
-            {user?.expertise && (
-              <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
-                {user.expertise}
-              </span>
-            )}
-            {!isOwnProfile && (
-              <button
-                onClick={() => toggleFollow(user.user_id)}
-                className="py-1.5 px-3 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium"
-              >
-                {user.is_following ? 'Following' : 'Follow'}
-              </button>
-            )}
+            
+            {/* Profile Details */}
+            <div className="space-y-2 mb-3">
+              {user?.address && (
+                <div className="flex items-center text-xs text-gray-600">
+                  <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {user.address}
+                </div>
+              )}
+              
+              {user?.interests?.[0]?.interests?.length > 0 && (
+                <div className="flex items-start text-xs text-gray-600">
+                  <svg className="w-3 h-3 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <span>{user.interests[0].interests.join(', ')}</span>
+                </div>
+              )}
+              
+              {user?.born && (
+                <div className="flex items-center text-xs text-gray-600">
+                  <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Born {new Date(user.born).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              )}
+              
+              {user?.created_at && (
+                <div className="flex items-center text-xs text-gray-600">
+                  <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Joined {new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                </div>
+              )}
+            </div>
+            
+            {/* Tags and Actions */}
+            <div className="flex items-center justify-between">
+              <div>
+                {user?.sexual_orientation && (
+                  <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
+                    {user.sexual_orientation}
+                  </span>
+                )}
+              </div>
+              
+              {!isOwnProfile && (
+                <button
+                  className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
+                  onClick={handleDirectMessage}
+                >
+                  <Send size={14} className="mr-1" />
+                  <span> slide</span>
+                </button>
+              )}
+            </div>
           </div>
+            
+            
+        
+
           <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
             <div className="flex justify-around py-2">
               <button
