@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useFeedPosts } from '@presentation/hooks/useFeedPosts';
 import NewPost from '@presentation/components/NewPost/NewPost';
 import { Image, Lock, DollarSign } from 'lucide-react';
+import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 export default function CreatePost({ user }) {
   const [setShowPostModal] = useState(false);
@@ -28,8 +29,7 @@ export default function CreatePost({ user }) {
           <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
             <img
               src={
-                user?.avatar_url ||
-                'https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg'
+                user?.avatar_url || PLACEHOLDER_PICTURE
               }
               alt="Profile"
               className="w-full h-full object-cover"

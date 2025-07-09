@@ -15,6 +15,7 @@ export default defineConfig({
       '@infrastructure': path.resolve(__dirname, './src/infrastructure'),
       '@presentation': path.resolve(__dirname, './src/presentation'),
       '@shared': path.resolve(__dirname, './src/shared'),
+      '@constants': path.resolve(__dirname, './src/constants'),
       // Add any other aliases you have or might need
     },
   },

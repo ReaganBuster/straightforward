@@ -17,6 +17,7 @@ import { useUserPosts } from '@presentation/hooks/useUserPosts';
 import RightSidebar from '@presentation/components/RightSidebar/RightSidebar';
 import ProfileEditForm from '@presentation/components/ProfileEditingForm/ProfileEditingForm';
 import RenderPost from '@presentation/components/RenderPost/RenderPost';
+import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 const Profile = ({ user }) => {
   // const navigate = useNavigate();
@@ -73,7 +74,7 @@ const Profile = ({ user }) => {
           <div className="flex mb-4">
             <div className="w-20 h-20 rounded-full border-2 border-red-100 overflow-hidden mr-4">
               <img
-                src={user?.avatar_url || '/api/placeholder/80/80'}
+                src={user?.avatar_url || PLACEHOLDER_PICTURE}
                 alt={user?.username}
                 className="w-full h-full object-cover"
               />
@@ -92,8 +93,26 @@ const Profile = ({ user }) => {
                     )}
                   </h2>
                 </div>
+
                 <div className="flex space-x-4 mb-3 text-sm">
-                  <div className="text-center">
+                  <div>
+                {user?.sexual_orientation && (
+                  <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
+                    {user.sexual_orientation}
+                  </span>
+                )}
+              </div>
+              
+              {!isOwnProfile && (
+                <button
+                  className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
+                  onClick={handleDirectMessage}
+                >
+                  <Send size={14} className="mr-1" />
+                  <span> slide</span>
+                </button>
+              )}
+                  {/* <div className="text-center">
                     <div className="font-semibold">
                       {user?.profile_views || 0}
                     </div>
@@ -114,8 +133,9 @@ const Profile = ({ user }) => {
                     <div className="font-semibold">
                       {user?.rating?.toFixed(1) || '4.5'}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
+                
               </div>
               {!isOwnProfile && (
                 <button
@@ -173,8 +193,30 @@ const Profile = ({ user }) => {
             </div>
             
             {/* Tags and Actions */}
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex space-x-4 mb-3 text-sm">
+              <div className="text-center">
+                    <div className="font-semibold">
+                      {user?.profile_views || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Profile Views</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold">{posts.length}</div>
+                    <div className="text-xs text-gray-500">posts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold">
+                      {user?.connections.length || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Connections</div>
+                  </div>
+                  <div className="flex items-center text-yellow-600">
+                    <Star size={14} className="mr-1" fill="currentColor" />
+                    <div className="font-semibold">
+                      {user?.rating?.toFixed(1) || '4.5'}
+                    </div>
+                  </div>
+              {/* <div>
                 {user?.sexual_orientation && (
                   <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
                     {user.sexual_orientation}
@@ -190,7 +232,7 @@ const Profile = ({ user }) => {
                   <Send size={14} className="mr-1" />
                   <span> slide</span>
                 </button>
-              )}
+              )} */}
             </div>
           </div>
             

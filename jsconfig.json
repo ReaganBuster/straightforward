@@ -7,7 +7,8 @@
       "@domain/*": ["domain/*"],
       "@infrastructure/*": ["infrastructure/*"],
       "@presentation/*": ["presentation/*"],
-      "@shared/*": ["shared/*"]
+      "@shared/*": ["shared/*"],
+      "@constants/*": ["constants/*"],
     },
     "jsx": "react-jsx"
   },
