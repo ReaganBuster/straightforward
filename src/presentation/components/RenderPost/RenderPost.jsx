@@ -5,13 +5,16 @@ import {
   Bookmark,
   Share2,
   MoreHorizontal,
-  Mail,
   Star,
-  Activity,
+  // Clock,
   Zap,
   X, // Import the X icon for the close button
   ZoomIn, // Optionally for a zoom hint
-  ZoomOut, // Optionally for a zoom hint
+  ZoomOut,
+  Send,
+  Clock,
+  Verified,
+  Eye, // Optionally for a zoom hint
 } from 'lucide-react';
 import { usePostRatings } from '@presentation/hooks/useOtherHooks';
 import RatingStars from '@presentation/components/RatingComponent/RatingComponent';
@@ -159,6 +162,34 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
                 })}
               </span>
             </div>
+            <div className="flex items-center mt-0.5 flex-wrap gap-1">
+              {authorInfo.expertise && (
+                // <span className={`text-xs px-2 py-0.5 rounded-full ${
+                //   // 'pending' ? 'bg-purple-100 text-purple-800' : 
+                //   'verified' ? 'bg-green-100 text-green-800' : 
+                //   'bg-red-100 text-red-800'
+                // }`}>
+                //   <Verified className='h-4 w-4'/>
+                //   verified
+                // </span>
+                <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                  'verified' ? 'bg-green-100 text-green-800' : 
+                  'bg-red-100 text-red-800'
+                }`}>
+                  <Verified size={12} />
+                  verified
+                </span>
+              )}
+             
+              {/* {getMonetizationBadge()}
+              {authorInfo.rating && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 flex items-center">
+                  <Star size={10} className="mr-0.5" fill="currentColor" />
+                  {authorInfo.rating.toFixed(1)}
+                </span>
+              )} */}
+              
+            </div>
           </div>
         </div>
         <div className="relative">
@@ -187,25 +218,16 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
         </div>
       </div>
 
+      
+
       <div className="cursor-pointer" onClick={handlePostClick}>
         {/* Content aligned with profile image */}
-        <div className="ml-12 -mt-1">
+        <div className="ml-12 mt-2">
           {/* Text content comes first */}
           <p className="text-gray-900">{post.caption}</p>
 
-          {/* Topics section */}
-          {topics && topics.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {topics.map((topic, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-800"
-                >
-                  #{topic}
-                </span>
-              ))}
-            </div>
-          )}
+          
+          
 
           {/* Image comes after text - now with click handler for overlay */}
           {post.thumbnail_url && (
@@ -223,17 +245,17 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-1 text-gray-500 text-xs ml-12">
+      <div className="flex items-center justify-between mt-2 text-gray-500 text-xs ml-12">
         <div className="flex items-center space-x-1">
-          <Zap size={12} />
+          <Eye size={12} />
           <span>{((post.views || 0) / 1000).toFixed(1)}K</span>
         </div>
-        {post.is_trending && post.trending_category && (
+        
           <div className="flex items-center space-x-1">
-            <Activity size={12} />
-            <span>{post.trending_category}</span>
+            <Clock size={12} />
+            <span>6 days left</span>
           </div>
-        )}
+        
       </div>
 
       <div className="ml-12 mt-3 flex items-center justify-between space-x-4">
@@ -275,7 +297,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
           className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
           onClick={handleDirectMessage}
         >
-          <Mail size={14} className="mr-1" />
+          <Send size={14} className="mr-1" />
           <span> slide</span>
         </button>
       </div>
