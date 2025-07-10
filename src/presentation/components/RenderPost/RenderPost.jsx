@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import {
   Heart,
   Bookmark,
@@ -19,6 +19,7 @@ import {
 import { usePostRatings } from '@presentation/hooks/useOtherHooks';
 import RatingStars from '@presentation/components/RatingComponent/RatingComponent';
 import MediaOverlay from '../MediaOverlay/MediaOverlay';
+import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 // Memoized to prevent unnecessary re-renders for large feeds
 const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
@@ -101,6 +102,16 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
     });
   };
 
+  const handleProfileView = e => {
+    e.stopPropagation();
+    const author = post.author || {};
+    navigate(`/profile/${author.user_id}`, {
+      state: {
+        target: author.user_id,
+      },
+    });
+  };
+
   const handleShare = e => {
     e.stopPropagation();
     navigator.clipboard.writeText(
@@ -129,13 +140,15 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
     <div className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
       <div className="flex justify-between">
         <div className="flex">
-          <div className="w-10 h-10 rounded-full overflow-hidden mr-2 border border-red-100">
-            <img
-              src={authorInfo.avatar_url || 'https://via.placeholder.com/40'}
-              alt={authorInfo.username}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <NavLink
+            to={`/profile/${authorInfo.user_id}`}
+            state={{ target: authorInfo.user_id }}
+            className="flex items-center space-x-2 hover:underline"
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden">
+              <img src={authorInfo.avatar_url || PLACEHOLDER_PICTURE} alt={authorInfo.username} />
+            </div>
+          </NavLink>
           <div>
             <div className="flex items-center">
               <h3 className="font-bold text-gray-900 mr-1">

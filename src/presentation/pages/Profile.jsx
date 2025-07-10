@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate} from 'react-router-dom';
 import {
   Edit,
   Grid,
@@ -8,6 +8,8 @@ import {
   Star,
   Plane,
   Send,
+  Coins,
+  CoinsIcon,
 } from 'lucide-react';
 import { useFeedPosts } from '@presentation/hooks/useFeedPosts';
 import { userAtom } from '@shared/state/authAtom';
@@ -20,30 +22,31 @@ import RenderPost from '@presentation/components/RenderPost/RenderPost';
 import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 const Profile = ({ user }) => {
-  // const navigate = useNavigate();
+  const location = useLocation();
+  const { target } = location.state || {};
   const { user: currentUser } = useRecoilValue(userAtom);
   const [activeTab, setActiveTab] = useState('ALL');
   const [showEditModal, setShowEditModal] = useState(false);
-
+  const [isOwnProfile , setIsProfileOwner] = useState(false);
+  
   const { toggleLike, toggleBookmark, addView } = useFeedPosts(
-    user?.user_id,
+    user?.user_id || target,
     activeTab
   );
 
   const {
     loading: profileLoading,
+    profile,
     stats,
     toggleFollow,
-  } = useProfile(user?.user_id);
+  } = useProfile(user?.user_id || target);
   const {
     posts,
     loading: postsLoading,
     hasMore,
     loadMore,
     changeContentType,
-  } = useUserPosts(user?.user_id, activeTab);
-
-  const isOwnProfile = currentUser?.user_id === user?.user_id;
+  } = useUserPosts(user?.user_id || target, activeTab);
 
   const handleLoadMore = () => {
     if (hasMore) loadMore();
@@ -52,6 +55,11 @@ const Profile = ({ user }) => {
   useEffect(() => {
     changeContentType(activeTab);
   }, [activeTab, changeContentType]);
+
+  useEffect(()=>{
+    const viewedId = target || user?.user_id; // fallback to own profile if target is undefined
+    setIsProfileOwner(currentUser?.id === viewedId);
+  },[target, user])
 
   const handleDirectMessage = e => {
     e.stopPropagation();
@@ -74,8 +82,8 @@ const Profile = ({ user }) => {
           <div className="flex mb-4">
             <div className="w-20 h-20 rounded-full border-2 border-red-100 overflow-hidden mr-4">
               <img
-                src={user?.avatar_url || PLACEHOLDER_PICTURE}
-                alt={user?.username}
+                src={user?.avatar_url || profile?.avatar_url || PLACEHOLDER_PICTURE}
+                alt={user?.username || profile?.username}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -85,10 +93,10 @@ const Profile = ({ user }) => {
                   <h2 className="font-bold text-lg">
                     {profileLoading
                       ? 'Loading...'
-                      : `${user?.name || user?.name}`}
+                      : `${user?.name || profile?.name}`}
                     {!profileLoading && (
                       <span className="text-gray-500 text-sm ml-1">
-                        @{user?.username}
+                        @{user?.username || profile?.username}
                       </span>
                     )}
                   </h2>
@@ -96,20 +104,28 @@ const Profile = ({ user }) => {
 
                 <div className="flex space-x-4 mb-3 text-sm">
                   <div>
-                {user?.sexual_orientation && (
-                  <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
-                    {user.sexual_orientation}
-                  </span>
-                )}
-              </div>
-              
+                    {user?.sexual_orientation && (
+                      <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">
+                        {user.sexual_orientation || profile?.sexual_orientation}
+                      </span>
+                    )}
+                  </div>
+              {isOwnProfile && (
+                <button
+                  className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
+                  onClick={handleDirectMessage}
+                >
+                  <Coins size={14} className="mr-1" />
+                  <span>Buy Tokens</span>
+                </button>
+              )}
               {!isOwnProfile && (
                 <button
                   className="flex items-center text-white bg-gradient-to-r from-red-600 to-red-700 px-2 py-1 rounded-full hover:from-red-700 hover:to-red-800 shadow-sm text-2"
                   onClick={handleDirectMessage}
                 >
                   <Send size={14} className="mr-1" />
-                  <span> slide</span>
+                  <span>slide</span>
                 </button>
               )}
                   {/* <div className="text-center">
@@ -137,7 +153,7 @@ const Profile = ({ user }) => {
                 </div>
                 
               </div>
-              {!isOwnProfile && (
+              {isOwnProfile && (
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="p-2 rounded-full hover:bg-gray-100"
@@ -148,19 +164,25 @@ const Profile = ({ user }) => {
             </div>
           </div>
           <div className="mb-4">
+            {/* current user bio */}
             {!profileLoading && user?.bio && typeof user.bio === 'string' ? (
               <p className="text-sm mb-3 whitespace-pre-wrap">{user.bio}</p>
+            ) : null}
+
+            {/* target bio */}
+            {!profileLoading && profile?.bio && typeof profile.bio === 'string' ? (
+              <p className="text-sm mb-3 whitespace-pre-wrap">{profile.bio}</p>
             ) : null}
             
             {/* Profile Details */}
             <div className="space-y-2 mb-3">
-              {user?.address && (
+              {(user?.address || profile?.address) && (
                 <div className="flex items-center text-xs text-gray-600">
                   <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {user.address}
+                  {(user.address || profile?.address)}
                 </div>
               )}
               
@@ -182,12 +204,12 @@ const Profile = ({ user }) => {
                 </div>
               )}
               
-              {user?.created_at && (
+              {(user?.created_at || profile?.created_at) && (
                 <div className="flex items-center text-xs text-gray-600">
                   <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Joined {new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                  Joined {new Date(user?.created_at || profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                 </div>
               )}
             </div>
@@ -210,12 +232,19 @@ const Profile = ({ user }) => {
                     </div>
                     <div className="text-xs text-gray-500">Connections</div>
                   </div>
-                  <div className="flex items-center text-yellow-600">
-                    <Star size={14} className="mr-1" fill="currentColor" />
-                    <div className="font-semibold">
-                      {user?.rating?.toFixed(1) || '4.5'}
-                    </div>
-                  </div>
+                  {
+                    isOwnProfile && (
+                      <div className="text-center">
+                        <div className="flex items-center text-yellow-600">
+                          <CoinsIcon size={14} className="mr-1" fill="currentColor" />
+                          <div className="font-semibold">
+                            {user?.tokens || '0'}
+                          </div>
+                        </div>
+                        <div className="text-xs text-yellow-600">Tokens</div>
+                      </div>
+                    )
+                  }
               {/* <div>
                 {user?.sexual_orientation && (
                   <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded-full font-medium mr-2">

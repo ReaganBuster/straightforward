@@ -58,6 +58,9 @@ const App = () => {
               <Route path="/analytics" element={<Analytics user={profile} />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/profile" element={<Profile user={profile} />} />
+              <Route
+              path="/profile/:id" element={<Profile />}
+            />
               <Route path="/help" element={<HelpScreen />} />
             </Route>
 
@@ -66,6 +69,7 @@ const App = () => {
               path="/m/:id"
               element={<Messages user={profile} onlineUsers={onlineUsers} />}
             />
+            
           </>
         ) : (
           <>
