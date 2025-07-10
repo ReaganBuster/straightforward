@@ -152,7 +152,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
           <div>
             <div className="flex items-center">
               <h3 className="font-bold text-gray-900 mr-1">
-                {authorInfo.name || authorInfo.username}
+                {authorInfo.name.slice(0,7)}
               </h3>
               {/* {authorInfo.is_verified && (
                 <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
@@ -165,7 +165,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
                 </div>
               )} */}
               <span className="text-gray-500 text-sm ml-1">
-                @{authorInfo.username}
+                @{authorInfo.username.slice(0.7)}
               </span>
               <span className="text-gray-500 text-sm mx-1">·</span>
               <span className="text-gray-500 text-sm">

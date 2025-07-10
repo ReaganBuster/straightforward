@@ -106,15 +106,21 @@ const Profile = ({ user }) => {
             <div className="flex-1 flex items-center justify-between">
               <div>
                 {/* Name and Username - with ellipsis on mobile */}
-                <div className="flex mb-2 items-baseline min-w-0"> {/* min-w-0 for truncate to work */}
-                  <h2 className="font-bold text-lg truncate"> {/* truncate applied here */}
-                    {profileLoading ? 'Loading...' : profile?.name} {/* Use profile.name */}
-                  </h2>
-                  {!profileLoading && (
-                    <span className="text-gray-500 text-sm ml-1 truncate"> {/* truncate applied here */}
-                      @{profile?.username} {/* Use profile.username */}
-                    </span>
-                  )}
+                <div className="flex mb-2 items-baseline min-w-0">
+                  <div className="flex-1 truncate">
+                    {!profileLoading ? (
+                      <>
+                        <div className="font-bold text-lg whitespace-nowrap">
+                          {profile.name?.slice(0, 14)}
+                        </div>
+                        <div className="text-gray-500 text-sm truncate">
+                          @{profile.username?.slice(0, 16)}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="font-bold text-lg">Loading...</div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Profile Actions/Orientation */}
@@ -246,13 +252,15 @@ const Profile = ({ user }) => {
                 onClick={() => setActiveTab('ALL')}
                 className={`flex-1 py-2 font-medium text-sm ${activeTab === 'ALL' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-700 hover:bg-gray-100 rounded-full'}`}
               >
-                <Grid size={18} className="mx-auto" />
+                {/* <Grid size={18} className="mx-auto" /> */}
+                Posts
               </button>
               <button
                 onClick={() => setActiveTab('MONETISED')}
                 className={`flex-1 py-2 font-medium text-sm ${activeTab === 'MONETISED' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-700 hover:bg-gray-100 rounded-full'}`}
               >
-                <DollarSign size={18} className="mx-auto" />
+                {/* <DollarSign size={18} className="mx-auto" /> */}
+                Media
               </button>
             </div>
           </div>
