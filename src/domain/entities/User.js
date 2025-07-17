@@ -62,6 +62,20 @@ class User {
         this.preferences = preferences;
         this.status = status;
     }
+
+    static fromDb(row) {
+        return new User(row);
+    }
+
+    toDb() {
+        return {
+            user_id: this.user_id,
+            username: this.username,
+            name: this.name,
+            email: this.email,
+            password: this.password,
+        }
+    }
 }
 
 export default User;

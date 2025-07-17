@@ -26,6 +26,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likeCount, setLikeCount] = useState(post.like_count || 0);
+  const [bookmarkCount, setBookmarkCount] = useState(post.bookmark_count || 0);
   const [isBookmarked, setIsBookmarked] = useState(post.is_bookmarked || false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -51,6 +52,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
 
   const handleBookmark = async postId => {
     setIsBookmarked(!isBookmarked);
+    setBookmarkCount(isBookmarked ? bookmarkCount - 1 : bookmarkCount + 1);
     await toggleBookmark(postId);
   };
 
@@ -149,7 +151,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
               <img src={authorInfo.avatar_url || PLACEHOLDER_PICTURE} alt={authorInfo.username} />
             </div>
           </NavLink>
-          <div>
+          <div className='ml-2'>
             <div className="flex items-center">
               <h3 className="font-bold text-gray-900 mr-1">
                 {authorInfo.name.slice(0,7)}
@@ -250,7 +252,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
               onClick={handleMediaClick} // Click opens overlay
             >
               <img
-                src={post.thumbnail_url || 'https://via.placeholder.com/600/400'}
+                src={post.thumbnail_url || PLACEHOLDER_PICTURE}
                 alt="Post thumbnail"
                 className="w-full h-auto max-w-full object-contain"
               />
@@ -305,6 +307,7 @@ const RenderPost = ({ post, user, toggleLike, toggleBookmark, addView }) => {
           }}
         >
           <Bookmark size={18} fill={isBookmarked ? 'currentColor' : 'none'} />
+          <span className="text-xs ml-1">{bookmarkCount > 0 ? bookmarkCount : ''}</span>
         </button>
 
         <button

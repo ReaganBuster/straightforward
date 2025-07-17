@@ -1,4 +1,4 @@
-class PostsRepository {
+export default class PostRepository {
     async createPost(postData) {
         throw new Error('Method not implemented.');
     }
@@ -7,7 +7,7 @@ class PostsRepository {
         throw new Error('Method not implemented.');
     }
 
-    async getAllPosts(filter = {}) {
+    async getAllPosts() {
         throw new Error('Method not implemented.');
     }
 
@@ -31,9 +31,7 @@ class PostsRepository {
         throw new Error('Method not implemented.');
     }
 
-    async updatePostView(postId) {
+    async incrementPostViews(postId) {
         throw new Error('Method not implemented.');
     }
 }
-
-module.exports = PostsRepository;

@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as supabaseQueries from '@infrastructure/config/supabase';
+import { fetchAllPosts } from '@domain/usecases/fetchAllPosts';
+import PostRepositoryImp from '@application/repository/PostRepositoryImp';
+import { useMemo } from 'react';
 
 //Feed Posts hook
 export const useFeedPosts = (userId, initialFeedType = 'discover') => {
@@ -10,39 +13,32 @@ export const useFeedPosts = (userId, initialFeedType = 'discover') => {
   const [feedType, setFeedType] = useState(initialFeedType);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchPosts = useCallback(
-    async (pageNum = 1, type = feedType) => {
+  const repo = useMemo(() => new PostRepositoryImp(), []);
+
+  const fetchPosts = 
+    async () => {
       if (!userId) return;
 
       try {
         setLoading(true);
-        const pageSize = 10;
-        const postsData = await supabaseQueries.getFeedPosts(
-          userId,
-          pageNum,
-          pageSize,
-          type
-        );
+        
+        const data = await fetchAllPosts(repo)();
+        
+        
+        setPosts(data);
+        
 
-        if (pageNum === 1) {
-          setPosts(postsData);
-        } else {
-          setPosts(prev => [...prev, ...postsData]);
-        }
-
-        setHasMore(postsData.length === pageSize);
+        setHasMore(data.length === pageSize);
       } catch (err) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
-    },
-    [userId, feedType]
-  );
+    };
 
   useEffect(() => {
-    fetchPosts(1, feedType);
-  }, [userId, feedType, fetchPosts]);
+    fetchPosts();
+  }, [feedType, fetchPosts]);
 
   const loadMore = () => {
     if (loading || !hasMore) return;

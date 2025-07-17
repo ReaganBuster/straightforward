@@ -1,4 +1,4 @@
-class UserRepository {
+export default class UserRepository {
     async createUser(userData) {
         throw new Error('Method not implemented.');
     }
@@ -24,13 +24,8 @@ class UserRepository {
     }
 
     // User profile methods
-    async getUserProfile(userId) {
+    async logOut() {
         throw new Error('Method not implemented.');
     }
-
-    async updateUserProfile(userId, profileData) {
-        throw new Error('Method not implemented.');
-    }
+    
 }
-
-module.exports = UserRepository;

@@ -621,20 +621,20 @@ export const togglePostBookmark = async (userId, postId) => {
 };
 
 // Add view to a post
-export const addPostView = async postId => {
-  try {
-    const { error } = await supabase
-      .from('posts')
-      .update({ views: supabase.rpc('increment', { x: 1, row: 'views' }) })
-      .eq('post_id', postId);
+// export const addPostView = async postId => {
+//   try {
+//     const { error } = await supabase
+//       .from('posts')
+//       .update({ views: supabase.rpc('increment', { x: 1, row: 'views' }) })
+//       .eq('post_id', postId);
 
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error adding post view:', error);
-    throw error;
-  }
-};
+//     if (error) throw error;
+//     return true;
+//   } catch (error) {
+//     console.error('Error adding post view:', error);
+//     throw error;
+//   }
+// };
 
 /**
  * Messaging Functions

@@ -28,6 +28,7 @@ const Feed = ({ user }) => {
     addPost,
   } = useFeedPosts(user?.user_id, activeTab);
 
+  console.log(posts)
   const handleTabChange = tab => setActiveTab(tab);
   const handlePostCreated = newPost => addPost(newPost);
 

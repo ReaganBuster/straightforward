@@ -16,6 +16,7 @@ import {
   Film,
   Mic
 } from 'lucide-react';
+import { PLACEHOLDER_PICTURE } from '@constants/constants';
 
 const NewPost = ({ user, onPostCreated, onClose }) => {
   const [caption, setCaption] = useState('');
@@ -29,8 +30,8 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
   const contentTypes = [
     { id: 'image', name: 'Images', icon: <ImagePlus size={16} />, accept: 'image/*', multiple: true },
     { id: 'video', name: 'Video', icon: <Video size={16} />, accept: 'video/*', multiple: false },
-    { id: 'audio', name: 'Audio', icon: <Music size={16} />, accept: 'audio/*', multiple: false },
-    { id: 'document', name: 'Document', icon: <FileText size={16} />, accept: '.pdf,.doc,.docx,.txt', multiple: false },
+    // { id: 'audio', name: 'Audio', icon: <Music size={16} />, accept: 'audio/*', multiple: false },
+    // { id: 'document', name: 'Document', icon: <FileText size={16} />, accept: '.pdf,.doc,.docx,.txt', multiple: false },
   ];
 
   const currentContentType = contentTypes.find(type => type.id === contentType);
@@ -94,8 +95,8 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
     switch (type) {
       case 'image': return <Camera size={16} className="text-green-600" />;
       case 'video': return <Film size={16} className="text-blue-600" />;
-      case 'audio': return <Mic size={16} className="text-purple-600" />;
-      default: return <FileText size={16} className="text-gray-600" />;
+      // case 'audio': return <Mic size={16} className="text-purple-600" />;
+      // default: return <FileText size={16} className="text-gray-600" />;
     }
   };
 
@@ -157,7 +158,7 @@ const NewPost = ({ user, onPostCreated, onClose }) => {
       <div className="flex items-start mb-4">
         <div className="w-10 h-10 rounded-full overflow-hidden mr-3 flex-shrink-0">
           <img
-            src={user?.avatar || 'https://via.placeholder.com/40'}
+            src={user?.avatar_url || PLACEHOLDER_PICTURE}
             alt="Profile"
             className="w-full h-full object-cover"
           />

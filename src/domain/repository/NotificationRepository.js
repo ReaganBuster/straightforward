@@ -1,4 +1,4 @@
-class NotificationRepository {
+export default class NotificationRepository {
     /**
      * Create a new notification.
      * @param {Object} notificationData
@@ -54,5 +54,3 @@ class NotificationRepository {
         throw new Error('Method not implemented.');
     }
 }
-
-module.exports = NotificationRepository;
